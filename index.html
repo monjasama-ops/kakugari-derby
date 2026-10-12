@@ -503,6 +503,45 @@ h1{color:#134c38;letter-spacing:.045em}
   .frame-color{width:26px;height:26px}
   .entry-number{width:29px;height:29px}
 }
+
+/* 出馬表ソートと架空観客の討論掲示板 */
+.entry-sortbar{display:flex;align-items:center;flex-wrap:wrap;gap:7px;background:#f7faf8;border-bottom:1px solid #d9e4de;padding:9px 12px}
+.entry-sortbar .entry-sort-label{font-weight:800;color:#365b4b;font-size:.83rem;margin-right:3px}
+.entry-sort-btn{border:1px solid #c9d9d0;background:#fff;color:#275240;border-radius:5px;padding:7px 12px;font-size:.82rem;font-weight:750;cursor:pointer}
+.entry-sort-btn.active{background:#176e4d;color:#fff;border-color:#176e4d}
+.entry-sort-note{font-size:.72rem;color:#687b73;margin-left:auto}
+.entry-horse-link{background:none;border:0;padding:0;text-align:left;color:#124e76;cursor:pointer;font-weight:800;font-size:inherit;text-decoration:underline;text-decoration-color:#9cb9c9;text-underline-offset:3px}
+.entry-horse-link:hover{color:#b44d25}
+.forum-panel{background:#fff;border:1px solid #d8e2dd;border-radius:9px;overflow:hidden;margin-top:13px}
+.forum-top{background:#174b39;color:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.forum-top strong{font-size:1.08rem}
+.forum-top small{color:#d5e7dd;font-size:.76rem}
+.forum-tabs{display:flex;gap:0;background:#f2f6f3;border-bottom:1px solid #d7e2db}
+.forum-tab{flex:1;padding:12px 10px;border:0;border-bottom:3px solid transparent;background:transparent;color:#466052;font-weight:800;cursor:pointer}
+.forum-tab.active{border-bottom-color:#1a7952;color:#135b3c;background:#fff}
+.forum-horse-picker{padding:11px 13px;background:#f8faf8;border-bottom:1px solid #e1e8e3}
+.forum-horse-picker label{font-weight:750;font-size:.85rem;margin-right:8px}
+.forum-horse-picker select{max-width:100%;min-width:230px;padding:9px;border:1px solid #bbcfc3;border-radius:5px;background:#fff}
+.forum-thread-info{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:13px 15px;border-bottom:1px solid #e4ebe6}
+.forum-thread-info b{color:#254b39}
+.forum-thread-info span{font-size:.76rem;color:#728278}
+.forum-post{display:flex;gap:11px;padding:13px 15px;border-bottom:1px solid #e6ece8;background:#fff}
+.forum-post:nth-child(even){background:#fafcfb}
+.forum-avatar{flex:0 0 37px;height:37px;display:grid;place-items:center;border-radius:50%;background:#e8f0e9;font-size:1.1rem;border:1px solid #d7e3da}
+.forum-content{flex:1;min-width:0}
+.forum-post-meta{display:flex;align-items:center;flex-wrap:wrap;gap:7px;font-size:.76rem;color:#76817a}
+.forum-post-meta b{color:#265a43;font-size:.84rem}
+.forum-role{background:#eef5ef;color:#3b6950;border-radius:12px;padding:2px 7px;font-size:.69rem}
+.forum-post-body{font-size:.9rem;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+.forum-reply{color:#2472a3;font-size:.8rem;font-weight:700}
+.forum-post-foot{display:flex;align-items:center;gap:13px;font-size:.76rem;color:#87938a}
+.forum-post-foot .likes{color:#3b8466}
+.forum-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:13px}
+.forum-action-btn{background:#f4f8f5;border:1px solid #bfcfc5;border-radius:5px;padding:9px 17px;color:#1d6145;font-weight:800;cursor:pointer}
+.forum-action-btn:hover{background:#e5f2e9}
+.forum-action-btn:disabled{opacity:.5;cursor:default}
+.forum-disclaimer{padding:9px 14px;background:#f5f7f5;color:#738078;font-size:.74rem;border-top:1px solid #e4eae5}
+@media(max-width:620px){.entry-sort-note{margin-left:0;width:100%}.entry-sort-btn{padding:7px 9px}.forum-post{padding:12px 9px;gap:8px}.forum-avatar{flex-basis:30px;height:30px}.forum-horse-picker select{min-width:0;width:100%;margin-top:6px}}
 </style>
 </head>
 <body>
@@ -565,6 +604,20 @@ h1{color:#134c38;letter-spacing:.045em}
   <div class="small">各レースの能力・調子に加え、架空の観客による予想人気を反映してオッズを算出。人気・オッズは毎レース変わります。天候は基本的に安定しており、雨や道悪はたまに発生します。</div>
   <div id="spectatorComment" class="spectator-comment"></div>
   <div id="oddsboard" class="oddsboard"></div>
+
+  <h2 id="raceForumAnchor">💬 競馬おじさん掲示板</h2>
+  <div class="forum-panel" id="raceForum">
+    <div class="forum-top"><strong>🏇 角刈競馬・みんなの予想掲示板</strong><small>架空の観客が勝手に討論中！</small></div>
+    <div class="forum-tabs">
+      <button type="button" class="forum-tab active" id="forumRaceTab" onclick="switchForum('race')">🏟️ レース全体</button>
+      <button type="button" class="forum-tab" id="forumHorseTab" onclick="switchForum('horse')">🐴 馬ごとの掲示板</button>
+    </div>
+    <div id="forumHorsePicker" class="forum-horse-picker" style="display:none"><label for="forumHorseSelect">話題の馬を選択</label><select id="forumHorseSelect" onchange="chooseForumHorse(this.value)"></select></div>
+    <div class="forum-thread-info"><b id="forumThreadTitle">レース全体の掲示板</b><span id="forumThreadCount"></span></div>
+    <div id="forumPosts"></div>
+    <div class="forum-actions"><button type="button" class="forum-action-btn" id="forumMoreBtn" onclick="showMoreForumPosts()">もっと読む</button><button type="button" class="forum-action-btn" onclick="addForumConversation()">💬 おじさんの新着レス</button></div>
+    <div class="forum-disclaimer">※ すべてゲーム内で自動生成された架空の書き込みです。実在の利用者による投稿やネット通信はありません。</div>
+  </div>
 
   <h2>🎫 馬券を買う</h2>
   <div class="bet-purchase-ui">
@@ -1569,6 +1622,7 @@ function prepareRace(){
   });
 
   renderOddsBoard();
+  resetForumThreads();
   makePicks();
   renderTicketPreview();
   updateGuide();
@@ -1699,18 +1753,190 @@ function raceFrameColor(i){
   const fg=[1,5,8].includes(frame)?'#1b2430':'#fff';
   return '<span class="frame-color" style="background:'+bg+';color:'+fg+'">'+frame+'</span>';
 }
+
+// 架空のおじさん同士がレース・各馬について言い合う。投稿は各レースで固定、追加ボタンで増える。
+let forumMode='race';
+let forumHorseIndex=null;
+let forumThreads={};
+let forumVisible=10;
+let forumSerial=0;
+let forumRaceFinished=false;
+const FORUM_EMOJIS=['👨','🧢','👴','🥸','👨‍🦳','🧔','👓','😎','🧑‍🌾','🎩'];
+function forumEscape(value){return String(value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function forumRandom(list){return list[Math.floor(Math.random()*list.length)];}
+function forumTargetName(i){return raceNumber(i)+'番 '+names[i];}
+function forumKey(){return forumMode==='race'?'race':'horse-'+forumHorseIndex;}
+function forumPickHorse(no){
+  const active=activeHorseIndexes();
+  const n=no || (1+Math.floor(Math.random()*SPECTATOR_COUNT));
+  const profile=spectatorProfile(n);
+  const rank=popularity();
+  let chosen=active[Math.floor(Math.random()*active.length)];
+  if(n===1 && active.includes(5))chosen=5;
+  else if(profile.name==='本命党'||profile.name==='堅実派')chosen=active.slice().sort(function(a,b){return rank[a]-rank[b];})[Math.floor(Math.random()*Math.min(4,active.length))];
+  else if(profile.name==='穴党'||profile.name==='逆張りおじさん')chosen=active.slice().sort(function(a,b){return rank[b]-rank[a];})[Math.floor(Math.random()*Math.min(5,active.length))];
+  else if(profile.name==='距離適性派')chosen=active.slice().sort(function(a,b){return distanceTrait(b)-distanceTrait(a);})[Math.floor(Math.random()*Math.min(5,active.length))];
+  return chosen;
+}
+function forumOpinion(i,no,mode,replyTo){
+  const profile=spectatorProfile(no);
+  const rank=popularity()[i];
+  const horseName=forumTargetName(i);
+  const isHiza=(no===1 && i===5);
+  const form=raceConditionState[i];
+  const odds=winOdds[i].toFixed(1);
+  const basic=[
+    horseName+'、'+rank+'番人気で'+odds+'倍か。俺は買うぞ。',
+    horseName+'が気になって夜しか眠れない。これは来る。',
+    horseName+'のオッズ、ちょっと妙味あるんじゃないか？',
+    horseName+'を消すやつは競馬を分かってない（個人の感想）。',
+    horseName+'が飛んだら俺の予想も一緒に飛ぶ。',
+    horseName+'、馬名の時点でもう勝ってるだろ。',
+    horseName+'は'+raceStyle[i]+'。展開ひとつで頭まである。',
+    'みんな'+horseName+'を過小評価してる。レース後に見返してくれ。',
+    horseName+'が勝ったら角刈りにする。負けたら明日考える。'
+  ];
+  let pool=basic;
+  if(profile.name==='全マ教徒')pool=activeHorseIndexes().includes(5)?[
+    'ヒザマズキナサイを信じよ。オッズなど飾りだ。',
+    '全マ教徒の朝はヒザマズキナサイの単勝から始まる。',
+    'また疑ってるのか？ ヒザマズキナサイを買えば心は勝っている。',
+    '他の馬が強い？ それでも俺はヒザマズキナサイだ。'
+  ]:['ヒザマズキナサイが放牧とは……今日は見学に徹する。'];
+  else if(profile.name==='データ派')pool=[
+    horseName+'の勝率'+(winProb[i]*100).toFixed(1)+'%。人気だけで切るのは危険。',
+    horseName+'は'+raceDistance+'mの適性が鍵。数字を見てから語れ。',
+    'データ上は'+horseName+'を無視できない。感情論はやめよう。',
+    'その予想、根拠は？ 俺は'+horseName+'の距離適性を評価する。'
+  ];
+  else if(profile.name==='穴党'||profile.name==='逆張りおじさん')pool=[
+    rank+'番人気の'+horseName+'で夢を見る。人気馬はみんな買うだろ。',
+    '一番人気なんて買って何が楽しいんだ。'+horseName+'で勝負。',
+    horseName+'を買わない理由が人気薄って、むしろ買い材料だろ。',
+    'このオッズなら'+horseName+'。外れても納得する。'
+  ];
+  else if(profile.name==='調子重視')pool=[
+    horseName+'は今日'+(form||'平常')+'。パドックの空気が違う（気がする）。',
+    '状態を見ない予想は信用しない。'+horseName+'の気配に注目。',
+    horseName+'の調子'+(form||'普通')+'なら、今日は様子見かな。'
+  ];
+  else if(profile.name==='逃げ先行党')pool=[
+    horseName+'は'+raceStyle[i]+'。前で粘れれば面白い。',
+    '結局、先に行った馬が強い。'+horseName+'を推す。',
+    '差し馬が届くとか言ってる間に'+horseName+'が逃げ切るぞ。'
+  ];
+  else if(profile.name==='差し追込党')pool=[
+    '直線で'+horseName+'が全部差す未来が見える。',
+    horseName+'の'+raceStyle[i]+'にロマンを感じる。',
+    '前残り予想ばかりだな。'+horseName+'の末脚を忘れるな。'
+  ];
+  else if(profile.name==='距離適性派')pool=[
+    horseName+'と'+raceDistance+'mの相性、ちゃんと見てるか？',
+    '距離適性が全て。'+horseName+'はここが勝負どころ。',
+    '人気より距離。'+horseName+'を買う理由はそれだけ。'
+  ];
+  if(replyTo){
+    const agree=['>>'+replyTo+' それは分かる。でも'+horseName+'も捨てられん。','>>'+replyTo+' いやいや、展開を甘く見すぎだろ。'+horseName+'が怖い。','>>'+replyTo+' その理屈なら'+horseName+'も候補に入るだろ。','>>'+replyTo+' 逆にそれがフラグなんだよなあ。','>>'+replyTo+' オッズ見てから言ってくれ。俺は'+horseName+'派。','>>'+replyTo+' それ先週も言ってなかったか？ｗ','>>'+replyTo+' 俺は反対。'+horseName+'のほうが面白い。'];
+    if(Math.random()<.66)pool=agree;
+  }
+  if(forumRaceFinished && lastFinalOrder && lastFinalOrder.length){
+    const winner=forumTargetName(lastFinalOrder[0]);
+    if(Math.random()<.65)pool=[
+      '結果出たぞ！ '+winner+'が勝つとはな。',
+      'おじさんたち、さっきまでの強気な予想はどこ行ったｗ',
+      '勝ったのは'+winner+'！ 馬券は……聞くな。',
+      '>>'+(replyTo||1)+' 結果論で語るなよ！ 次は当てるからな。',
+      'この結果を読めたやつ、正直に手を挙げろ。'
+    ];
+  }
+  return forumRandom(pool);
+}
+function makeForumPost(key,forcedHorse){
+  const arr=forumThreads[key] || (forumThreads[key]=[]);
+  const previous=arr.length && Math.random()<.58 ? arr[Math.floor(Math.random()*Math.min(arr.length,8))] : null;
+  const no=1+Math.floor(Math.random()*SPECTATOR_COUNT);
+  const profile=spectatorProfile(no);
+  const target=forcedHorse===null ? forumPickHorse(no) : forcedHorse;
+  const id=++forumSerial;
+  const age=Math.max(1,Math.round((arr.length+1)*2.4+Math.random()*13));
+  arr.unshift({id:id,no:no,icon:FORUM_EMOJIS[no%FORUM_EMOJIS.length],profile:profile.name,body:forumOpinion(target,no,key,previous?previous.id:null),likes:Math.floor(Math.random()*17),age:age,target:target});
+}
+function resetForumThreads(){
+  forumThreads={};forumSerial=0;forumVisible=10;forumRaceFinished=false;
+  forumMode='race';forumHorseIndex=activeHorseIndexes()[0];
+  for(let n=0;n<32;n++)makeForumPost('race',null);
+  activeHorseIndexes().forEach(function(i){for(let n=0;n<11;n++)makeForumPost('horse-'+i,i);});
+  renderForum();
+}
+function renderForum(){
+  const container=document.getElementById('forumPosts');
+  if(!container)return;
+  const active=activeHorseIndexes();
+  if(!active.includes(forumHorseIndex))forumHorseIndex=active[0];
+  const horseMode=forumMode==='horse';
+  document.getElementById('forumRaceTab').classList.toggle('active',!horseMode);
+  document.getElementById('forumHorseTab').classList.toggle('active',horseMode);
+  document.getElementById('forumHorsePicker').style.display=horseMode?'block':'none';
+  const select=document.getElementById('forumHorseSelect');
+  select.innerHTML=active.map(function(i){return '<option value="'+i+'"'+(i===forumHorseIndex?' selected':'')+'>'+raceNumber(i)+'番 '+forumEscape(names[i])+'</option>';}).join('');
+  const key=forumKey();
+  const arr=forumThreads[key]||[];
+  document.getElementById('forumThreadTitle').textContent=horseMode?forumTargetName(forumHorseIndex)+' の掲示板':currentScheduledRace().name+' の掲示板';
+  document.getElementById('forumThreadCount').textContent=arr.length+'件のレス';
+  container.innerHTML=arr.slice(0,forumVisible).map(function(post){
+    return '<article class="forum-post"><div class="forum-avatar">'+post.icon+'</div><div class="forum-content">'+
+      '<div class="forum-post-meta"><b>おじさん'+post.no+'号</b><span class="forum-role">'+forumEscape(post.profile)+'</span><span>No.'+post.id+'</span><span>架空・'+post.age+'分前</span></div>'+
+      '<div class="forum-post-body">'+forumEscape(post.body).replace(/(&gt;&gt;\d+)/g,'<span class="forum-reply">$1</span>')+'</div>'+
+      '<div class="forum-post-foot"><span class="likes">👍 '+post.likes+'</span><span>💬 予想・雑談</span></div></div></article>';
+  }).join('') || '<div class="forum-post">まだレスがありません。</div>';
+  const more=document.getElementById('forumMoreBtn');
+  more.disabled=forumVisible>=arr.length;
+  more.textContent=forumVisible>=arr.length?'すべて表示中':'もっと読む（残り'+(arr.length-forumVisible)+'件）';
+}
+function switchForum(mode){forumMode=mode==='horse'?'horse':'race';forumVisible=10;renderForum();}
+function chooseForumHorse(index){const i=Number(index);if(!activeHorseIndexes().includes(i))return;forumHorseIndex=i;forumMode='horse';forumVisible=10;renderForum();}
+function openHorseForum(index){chooseForumHorse(index);document.getElementById('raceForumAnchor').scrollIntoView({behavior:'smooth',block:'start'});}
+function showMoreForumPosts(){forumVisible+=12;renderForum();}
+function addForumConversation(){
+  const key=forumKey();
+  const target=forumMode==='horse'?forumHorseIndex:null;
+  for(let n=0;n<4;n++)makeForumPost(key,target);
+  forumVisible=Math.max(forumVisible,10);
+  renderForum();
+}
+function forumAfterRace(order){
+  forumRaceFinished=true;
+  for(let n=0;n<9;n++)makeForumPost('race',null);
+  if(order&&order.length){for(let n=0;n<5;n++)makeForumPost('horse-'+order[0],order[0]);}
+  renderForum();
+}
+
+let entrySortMode='number';
+function setEntrySort(mode){
+  if(!['number','popularity','odds'].includes(mode))return;
+  entrySortMode=mode;
+  renderOddsBoard();
+}
 function renderOddsBoard(){
   renderSpectatorComment();
   const board=document.getElementById('oddsboard');
   const rank=popularity();
-  const order=activeHorseIndexes().sort(function(a,b){return raceNumber(a)-raceNumber(b);});
+  const order=activeHorseIndexes().sort(function(a,b){
+    if(entrySortMode==='popularity')return rank[a]-rank[b] || raceNumber(a)-raceNumber(b);
+    if(entrySortMode==='odds')return winOdds[a]-winOdds[b] || raceNumber(a)-raceNumber(b);
+    return raceNumber(a)-raceNumber(b);
+  });
+  const sortButtons=[['number','馬番順'],['popularity','人気順'],['odds','単勝オッズ順']].map(function(item){
+    return '<button type="button" class="entry-sort-btn'+(entrySortMode===item[0]?' active':'')+'" onclick="setEntrySort(\''+item[0]+'\')" aria-pressed="'+(entrySortMode===item[0])+'">'+item[1]+'</button>';
+  }).join('');
   board.innerHTML='<div class="entry-titlebar"><span>🏇 出馬表・オッズ</span><small>'+order.length+'頭出走 ｜ オッズは予想値</small></div>'+
+    '<div class="entry-sortbar"><span class="entry-sort-label">並び替え</span>'+sortButtons+'<span class="entry-sort-note">馬名を押すと個別掲示板へ</span></div>'+
     '<div class="entry-header"><span>枠</span><span>馬番</span><span>馬名 / 脚質・調子</span><span>人気</span><span>単勝</span><span>複勝</span><span>適性 / 勝率</span></div>'+
     order.map(function(i){
       return '<div class="entry-row'+(rank[i]<=3?' entry-top3':'')+'">'+
         '<div class="entry-cell">'+raceFrameColor(i)+'</div>'+
         '<div class="entry-cell"><span class="entry-number">'+raceNumber(i)+'</span></div>'+
-        '<div class="entry-cell entry-horse"><strong>'+names[i]+'</strong><small>'+raceStyle[i]+' '+raceConditionHtml(i)+'</small></div>'+
+        '<div class="entry-cell entry-horse"><strong><button type="button" class="entry-horse-link" onclick="openHorseForum('+i+')">'+forumEscape(names[i])+'</button></strong><small>'+raceStyle[i]+' '+raceConditionHtml(i)+'</small></div>'+
         '<div class="entry-cell entry-pop">'+rank[i]+'人気</div>'+
         '<div class="entry-cell entry-win">'+winOdds[i].toFixed(1)+'</div>'+
         '<div class="entry-cell entry-place">'+placeOdds[i].toFixed(1)+'</div>'+
@@ -3742,6 +3968,7 @@ function finish(order){
       : '');
 
   lastFinalOrder=order.slice();
+  forumAfterRace(order);
   buildRaceTimeAndMargins(lastFinalOrder);
   fullBoardVisible=false;
   renderBoard();
