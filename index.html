@@ -542,6 +542,17 @@ h1{color:#134c38;letter-spacing:.045em}
 .forum-action-btn:disabled{opacity:.5;cursor:default}
 .forum-disclaimer{padding:9px 14px;background:#f5f7f5;color:#738078;font-size:.74rem;border-top:1px solid #e4eae5}
 @media(max-width:620px){.entry-sort-note{margin-left:0;width:100%}.entry-sort-btn{padding:7px 9px}.forum-post{padding:12px 9px;gap:8px}.forum-avatar{flex-basis:30px;height:30px}.forum-horse-picker select{min-width:0;width:100%;margin-top:6px}}
+
+/* 掲示板は初期状態で折りたたみ。出馬表の馬名クリック時は自動展開 */
+.forum-collapsible{margin:16px 0 20px;border:1px solid #cddfd3;border-radius:9px;background:#fff;overflow:hidden}
+.forum-collapse-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;padding:15px 16px;background:#eaf4ee;color:#174b39;font-size:1.14rem;font-weight:800;list-style:none}
+.forum-collapse-toggle::-webkit-details-marker{display:none}
+.forum-collapse-toggle::before{content:'▸';margin-right:3px;color:#267b52}
+.forum-collapsible[open] .forum-collapse-toggle::before{content:'▾'}
+.forum-collapse-hint{font-size:.78rem;font-weight:600;color:#4b7b62;margin-left:auto}
+.forum-collapsible[open] .forum-collapse-hint{font-size:0}
+.forum-collapsible[open] .forum-collapse-hint::after{content:'クリックして閉じる';font-size:.78rem}
+.forum-collapsible .forum-panel{margin-top:0;border:0;border-top:1px solid #cddfd3;border-radius:0}
 </style>
 </head>
 <body>
@@ -605,7 +616,8 @@ h1{color:#134c38;letter-spacing:.045em}
   <div id="spectatorComment" class="spectator-comment"></div>
   <div id="oddsboard" class="oddsboard"></div>
 
-  <h2 id="raceForumAnchor">💬 競馬おじさん掲示板</h2>
+  <details class="forum-collapsible" id="raceForumAnchor">
+    <summary class="forum-collapse-toggle">💬 競馬おじさん掲示板 <span class="forum-collapse-hint">クリックして開く・閉じる</span></summary>
   <div class="forum-panel" id="raceForum">
     <div class="forum-top"><strong>🏇 角刈競馬・みんなの予想掲示板</strong><small>架空の観客が勝手に討論中！</small></div>
     <div class="forum-tabs">
@@ -618,6 +630,7 @@ h1{color:#134c38;letter-spacing:.045em}
     <div class="forum-actions"><button type="button" class="forum-action-btn" id="forumMoreBtn" onclick="showMoreForumPosts()">もっと読む</button><button type="button" class="forum-action-btn" onclick="addForumConversation()">💬 おじさんの新着レス</button></div>
     <div class="forum-disclaimer">※ すべてゲーム内で自動生成された架空の書き込みです。実在の利用者による投稿やネット通信はありません。</div>
   </div>
+  </details>
 
   <h2>🎫 馬券を買う</h2>
   <div class="bet-purchase-ui">
@@ -1895,7 +1908,7 @@ function renderForum(){
 }
 function switchForum(mode){forumMode=mode==='horse'?'horse':'race';forumVisible=10;renderForum();}
 function chooseForumHorse(index){const i=Number(index);if(!activeHorseIndexes().includes(i))return;forumHorseIndex=i;forumMode='horse';forumVisible=10;renderForum();}
-function openHorseForum(index){chooseForumHorse(index);document.getElementById('raceForumAnchor').scrollIntoView({behavior:'smooth',block:'start'});}
+function openHorseForum(index){chooseForumHorse(index);const panel=document.getElementById('raceForumAnchor');panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'});}
 function showMoreForumPosts(){forumVisible+=12;renderForum();}
 function addForumConversation(){
   const key=forumKey();
