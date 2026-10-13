@@ -554,11 +554,21 @@ h1{color:#134c38;letter-spacing:.045em}
 .forum-collapsible[open] .forum-collapse-hint{font-size:0}
 .forum-collapsible[open] .forum-collapse-hint::after{content:'クリックして閉じる';font-size:.78rem}
 .forum-collapsible .forum-panel{margin-top:0;border:0;border-top:1px solid #cddfd3;border-radius:0}
+
+/* 更新履歴 */
+.update-history-button{display:inline-flex;align-items:center;gap:6px;margin:0 0 12px;padding:9px 14px;border-radius:9px;border:1px solid #9db5d6;background:#f0f6ff;color:#184b84;font-weight:800;cursor:pointer}
+.update-history-overlay{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:99999;display:none;align-items:center;justify-content:center;padding:18px}
+.update-history-overlay.is-open{display:flex}
+.update-history-dialog{background:#fff;border-radius:15px;width:min(620px,100%);max-height:85vh;overflow:auto;padding:23px;box-shadow:0 20px 60px #0005;color:#26364c}
+.update-history-dialog h2{margin:0 0 10px;color:#174b39}.update-history-dialog h3{margin:18px 0 6px;font-size:1rem;color:#1c5a7d}.update-history-dialog li{margin:7px 0;line-height:1.55}.update-history-close{padding:10px 20px;border:0;border-radius:8px;background:#1d754f;color:white;font-weight:800;cursor:pointer}
+.forum-reply-link{color:#2463ad;font-weight:800;text-decoration:underline;cursor:pointer;background:transparent;border:0;padding:0;font:inherit}
+.forum-post:target,.forum-post.forum-highlight{outline:3px solid #f4b641;outline-offset:-3px;background:#fff7dc;transition:background 1s}
 </style>
 </head>
 <body>
 <div class="wrap">
 <h1>🏇 角刈ダービー</h1>
+<button type="button" class="update-history-button" onclick="showUpdateHistory()">📋 更新履歴</button>
 <div id="seasonRaceBanner" class="season-race-banner">
   <div id="seasonRaceMain" class="season-race-main">1レース目／全24レース　2月【角刈フェブラリーS】</div>
   <div id="seasonRaceSub" class="season-race-sub">GⅠ・東京・ダ1600m</div>
@@ -897,7 +907,7 @@ let lastRaceTimes={};
 let lastRaceMargins={};
 
 let debt=0;
-const loanInterest=0.05;
+const loanInterest=0.10;
 const MANO_LOAN_AMOUNT=100000;
 
 // 年間リザルト用。money / debt の宣言後に初期化する。
@@ -1881,6 +1891,39 @@ function forumHumanDrama(i,no,replyTo){
   ];
   return forumRandom(templates.concat(everyday));
 }
+function forumContextReply(i,no,previous){
+  const source=String(previous.body||'').replace(/^>>\d+\s*/, '').trim();
+  const quoted=source.length>40?source.slice(0,39)+'…':source;
+  const horseName=forumTargetName(previous.target===undefined?i:previous.target);
+  const ownHorse=forumTargetName(i);
+  const lower=source;
+  let reactions;
+  if(/倍|人気|オッズ|数字|勝率|データ/.test(lower)){
+    reactions=['数字は分かる。でもそのオッズで買う価値があるかは別だろ。','その人気ならむしろ妙味があると思う。','数字だけで切ったら痛い目を見るぞ。'];
+  }else if(/逃げ|先行|差し|追込|展開|直線|末脚/.test(lower)){
+    reactions=['その展開になるには前が競り合う必要があるだろ。','ペースの読みは同意。ただ最後の直線が読めん。','脚質だけで決めつけるのは早いと思うぞ。'];
+  }else if(/嫁|妻|息子|孫|家族|仕事|会社|昼飯|焼きそば|猫|財布|節約/.test(lower)){
+    reactions=['競馬の前にそっちを何とかしろｗ','分かる。俺も似たようなことやった。','馬券の話よりそっちの続きが気になるんだが。'];
+  }else if(/昔|去年|記念|杯|伝説|現地|写真判定/.test(lower)){
+    reactions=['そのレースの話、毎回微妙に着差が変わってないか？','覚えてるぞ。いや、俺の記憶とは少し違うな。','その話を聞くと今日も応援したくなる。'];
+  }else if(/外れ|負け|謝|引退|反省|逆神/.test(lower)){
+    reactions=['そこまで言えるなら次は当たるかもな。','引退宣言、今月何回目だよｗ','外したのはお互い様だ。次の予想を聞かせろ。'];
+  }else if(/ヒザマズキナサイ|全マ|信仰/.test(lower)){
+    reactions=['信仰は自由だが買い目まで強制するなｗ','そこまで一途なのは少し羨ましい。','全マ教徒の朝礼はここですか？'];
+  }else{
+    reactions=['その根拠はどこから来たんだ？','言いたいことは分かるが、そこは賛成できん。','なるほど。俺は少し違う見方をしてる。','それは確かに一理ある。'];
+  }
+  const rival=FORUM_RIVALS[no]===previous.no;
+  const prefix=rival?'おじさん'+previous.no+'号、またお前か。':previous.no===no?'さっきの俺の書き込みだけど、':'';
+  const suffix=forumRandom([
+    '俺は'+ownHorse+'をまだ見限れない。',
+    horseName+'の評価はレースが終わるまで保留だな。',
+    'レース後にこのやり取り見返そうぜ。',
+    'その点だけは認める。',
+    'まあ予想が違うから面白いんだけどな。'
+  ]);
+  return '>>'+previous.id+' '+prefix+'「'+quoted+'」についてだけど、'+forumRandom(reactions)+' '+suffix;
+}
 function forumTargetedReply(i,no,previous){
   const who=previous.no, name=forumTargetName(i);
   const m=forumPerson(no);
@@ -2109,20 +2152,19 @@ function makeForumPost(key,forcedHorse){
   const previous=arr.length && Math.random()<.77 ? arr[Math.floor(Math.random()*Math.min(arr.length,Math.min(12,arr.length)))]:null;
   const id=++forumSerial;
   const age=Math.max(1,Math.round((arr.length+1)*2.4+Math.random()*13));
-  let body=forumOpinion(target,no,key,previous?previous.id:null);
-  if(previous&&Math.random()<.63)body=forumTargetedReply(target,no,previous);
-  else if(Math.random()<.28)body=forumHumanDrama(target,no,previous?previous.id:null);
-  // 既存の短い定型文よりも組み立て式の発言を多めに使う。
-  if(Math.random()<.84)body=forumVariedLine(target,no,previous);
+  // 返信は元レスの内容に合わせて書く。アンカーのない投稿には返信先を付けない。
+  let body;
+  if(previous && Math.random()<.79)body=forumContextReply(target,no,previous);
+  else body=Math.random()<.86?forumVariedLine(target,no,null):forumOpinion(target,no,key,null);
   const used=new Set(arr.map(function(p){return forumNormalizeLine(p.body);}));
   for(let attempt=0;attempt<35 && used.has(forumNormalizeLine(body));attempt++){
-    body=forumVariedLine(target,no,previous);
+    body=previous&&Math.random()<.75?forumContextReply(target,no,previous):forumVariedLine(target,no,null);
   }
   const memory=forumPerson(no);
   memory.pick=target;
   memory.lastLine=body;
   memory.boasts++;
-  arr.unshift({id:id,no:no,icon:FORUM_EMOJIS[no%FORUM_EMOJIS.length],profile:profile.name,body:body,likes:Math.floor(Math.random()*17),age:age,target:target,replyTo:previous?previous.id:null,regular:FORUM_REGULARS.includes(no)});
+  arr.unshift({id:id,no:no,icon:FORUM_EMOJIS[no%FORUM_EMOJIS.length],profile:profile.name,body:body,likes:Math.floor(Math.random()*17),age:age,target:target,replyTo:(body.match(/^>>(\d+)/)||[])[1] ? Number(body.match(/^>>(\d+)/)[1]) : null,regular:FORUM_REGULARS.includes(no)});
 }
 function resetForumThreads(){
   forumThreads={};forumSerial=0;forumVisible=10;forumRaceFinished=false;
@@ -2147,14 +2189,22 @@ function renderForum(){
   document.getElementById('forumThreadTitle').textContent=horseMode?forumTargetName(forumHorseIndex)+' の掲示板':currentScheduledRace().name+' の掲示板';
   document.getElementById('forumThreadCount').textContent=arr.length+'件のレス';
   container.innerHTML=arr.slice(0,forumVisible).map(function(post){
-    return '<article class="forum-post"><div class="forum-avatar">'+post.icon+'</div><div class="forum-content">'+
+    return '<article class="forum-post" id="forum-post-'+post.id+'"><div class="forum-avatar">'+post.icon+'</div><div class="forum-content">'+
       '<div class="forum-post-meta"><b>おじさん'+post.no+'号</b>'+(FORUM_NICKNAMES[post.no]?'<span class="forum-nickname">'+forumEscape(FORUM_NICKNAMES[post.no])+'</span>':'')+'<span class="forum-role">'+forumEscape(post.profile)+'</span><span>No.'+post.id+'</span><span>架空・'+post.age+'分前</span></div>'+
-      '<div class="forum-post-body">'+forumEscape(post.body).replace(/(&gt;&gt;\d+)/g,'<span class="forum-reply">$1</span>')+'</div>'+
+      '<div class="forum-post-body">'+forumEscape(post.body).replace(/&gt;&gt;(\d+)/g,function(_,id){return '<button type="button" class="forum-reply-link" onclick="jumpForumReply('+id+')">&gt;&gt;'+id+'</button>';})+'</div>'+
       '<div class="forum-post-foot"><span class="likes">👍 '+post.likes+'</span><span>💬 予想・雑談</span></div></div></article>';
   }).join('') || '<div class="forum-post">まだレスがありません。</div>';
   const more=document.getElementById('forumMoreBtn');
   more.disabled=forumVisible>=arr.length;
   more.textContent=forumVisible>=arr.length?'すべて表示中':'もっと読む（残り'+(arr.length-forumVisible)+'件）';
+}
+function jumpForumReply(id){
+  const key=forumKey(),posts=forumThreads[key]||[];
+  const index=posts.findIndex(function(p){return p.id===Number(id);});
+  if(index<0)return;
+  if(index>=forumVisible){forumVisible=index+1;renderForum();}
+  const element=document.getElementById('forum-post-'+id);
+  if(element){element.scrollIntoView({behavior:'smooth',block:'center'});element.classList.add('forum-highlight');setTimeout(function(){element.classList.remove('forum-highlight');},2400);}
 }
 function switchForum(mode){forumMode=mode==='horse'?'horse':'race';forumVisible=10;renderForum();}
 function chooseForumHorse(index){const i=Number(index);if(!activeHorseIndexes().includes(i))return;forumHorseIndex=i;forumMode='horse';forumVisible=10;renderForum();}
@@ -4217,7 +4267,7 @@ function finish(order){
   seasonBestPayout=Math.max(seasonBestPayout,payout);
   if(order && order.length)seasonWins[order[0]]++;
 
-  // 借金がある場合はレース終了時に5%利息を加算し、自動返済条件だけ判定する。
+  // 借金がある場合はレース終了時に10%利息を加算し、自動返済条件だけ判定する。
   // マノファイナンスの新規融資判定は「次のレース」を押した時まで行わない。
   const debtInterestAdded=applyRaceDebtInterest();
   const autoRepaid=autoRepayDebt();
@@ -4230,7 +4280,7 @@ function finish(order){
     '3着 '+raceNumber(top[2])+'番 '+names[top[2]]+
     renderResultBetSummary(resultGroups,payout,ticketMessages)+
     (debtInterestAdded>0
-      ? '<div class="mano-result-line"><b>👩‍💼 マノファイナンス利息：</b> +'+debtInterestAdded.toLocaleString()+'円（1レース 5%）</div>'
+      ? '<div class="mano-result-line"><b>👩‍💼 マノファイナンス利息：</b> +'+debtInterestAdded.toLocaleString()+'円（1レース 10%）</div>'
       : '')+
     (autoRepaid>0
       ? '<div style="margin-top:10px;padding:10px 12px;border-radius:8px;background:#eef7ff"><b>💰 借金を自動返済しました：</b> '+autoRepaid.toLocaleString()+'円<br>返済後の所持金：<b>'+money.toLocaleString()+'円</b></div>'
@@ -4409,9 +4459,13 @@ document.getElementById('stake').addEventListener('input',function(){
 
 loadHorseSettings();
 renderHorseEditor();
+const KAKUGARI_UPDATE_VERSION='2026-10-13-forum-replies-mano10';
+function showUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.add('is-open');}
+function closeUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.remove('is-open');try{localStorage.setItem('kakugari-last-seen-update',KAKUGARI_UPDATE_VERSION);}catch(e){}}
 prepareRace();
 update();
 renderCommentaryMode();
+try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSION)showUpdateHistory();}catch(e){showUpdateHistory();}
 </script>
 
 <div id="seasonResultOverlay" class="season-result-overlay" style="display:none">
@@ -4435,12 +4489,24 @@ renderCommentaryMode();
     <div class="mano-big">100,000円 ご融資しました</div>
     <div class="mano-text">
       ご安心ください。手続きも審査も必要ありません♪<br>
-      利率は<strong>1レースごとに5%</strong>です。<br>
+      利率は<strong>1レースごとに10%</strong>です。<br>
       所持金が借金残高を10,000円以上上回ると、自動返済されます。
     </div>
     <button onclick="closeManoFinanceNotice()">😊 ありがとうございます……</button>
   </div>
 </div>
 
+
+<div class="update-history-overlay" id="updateHistoryOverlay" role="dialog" aria-modal="true" aria-labelledby="updateHistoryHeading" onclick="if(event.target===this)closeUpdateHistory()">
+  <div class="update-history-dialog">
+    <h2 id="updateHistoryHeading">📋 角刈ダービー 更新履歴</h2>
+    <p style="color:#64748b">最新版：2026年10月13日（掲示板・マノファイナンス調整）</p>
+    <h3>🆕 2026/10/13</h3>
+    <ul><li>更新履歴ボタンを設置。新しい版を開いた最初の1回だけ自動表示します。</li><li>掲示板のアンカーレスを会話の内容に合わせて生成。返信元へジャンプできるよう改善。</li><li>マノファイナンスの利息を1レースごとに5%→10%へ変更（複利）。</li></ul>
+    <h3>2026/10/12〜13</h3>
+    <ul><li>出馬表の人気順・オッズ順ソートと馬別掲示板を追加。</li><li>競馬おじさんの架空の過去レース談義・レスバ・常連の因縁・日常雑談を拡充。</li><li>掲示板を初期状態で折りたたむ仕様に変更。</li><li>馬券購入画面を一覧形式にリニューアル。</li></ul>
+    <button type="button" class="update-history-close" onclick="closeUpdateHistory()">確認しました ✓</button>
+  </div>
+</div>
 </body>
 </html>
