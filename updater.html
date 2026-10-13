@@ -7,10 +7,11 @@
 <div class="card"><div class="head"><span class="num">1</span>最新版のファイルを準備</div><p>ChatGPTから受け取ったHTMLを選択してください。<b>この段階ではファイルを送信しません。</b></p><label class="drop" id="drop" for="file"><b>📄 HTMLファイルを選択 / ドロップ</b><small>index.html、index(1).html などでも確認できます</small></label><input id="file" type="file" accept=".html,text/html"><div id="fileStatus" class="status" role="status" aria-live="polite">ファイル未選択</div><div class="actions"><button class="btn" id="rename" disabled>📥 index.html の名前で保存</button><button class="btn" id="clearFile" disabled>選択を解除</button></div><div class="tiny">ファイル名・サイズ・HTML形式・ゲームの識別文字列をチェックします。内容を完全に保証する検査ではありません。</div></div>
 <div class="card"><div class="head"><span class="num">2</span>この画面からGitHubへアップロード</div>
 <p>選んだHTMLを、<b>このページから直接GitHubの <code>main</code> ブランチへ上書き更新</b>できます。GitHubの<strong>Fine-grained personal access token</strong>が必要です（初回のみ発行）。</p>
-<div class="note">🔒 トークンはこのページのメモリ内だけで使用し、保存しません。<b>公開サイトのHTMLには絶対にトークンを書き込まないでください。</b> この管理画面はGitHub PagesのHTTPSアドレスで開き、共有PCでは使用しないでください。</div>
+<div class="note">🔒 初期状態ではトークンを保存しません。「この端末に保存」を有効にした場合だけ、このブラウザの保存領域に残します。<b>ブラウザ保存は暗号化された秘密保管庫ではありません。</b> 公開サイトのHTMLやGitHubのファイルには絶対にトークンを書き込まないでください。共有PCでは保存しないでください。</div>
 <div class="actions"><a class="btn" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">🔑 トークン発行画面 ↗</a><a class="btn" href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">🔐 発行済みトークン管理 ↗</a></div>
 <details><summary>初回：トークンの発行設定を見る</summary><ol><li>GitHubにログインして上の「トークン発行画面」を開く</li><li>Token name は <code>kakugari-updater</code> など、Expiration は短め（例：30日）</li><li>Resource owner：<code>monjasama-ops</code></li><li>Repository access：<b>Only select repositories</b> → <code>kakugari-derby</code> のみ</li><li>Repository permissions：<b>Contents → Read and write</b>（MetadataのReadは自動付与）</li><li>「Generate token」で作成し、表示されたトークンをコピー。<b>再表示できないので紛失したら再発行</b></li></ol><p class="tiny">必要なのは対象リポジトリのContents権限だけです。全リポジトリへのアクセス権やワークフロー権限は不要です。</p></details>
-<label class="formlabel" for="token">GitHubトークン（画面を閉じると消えます）</label><input type="password" id="token" placeholder="github_pat_..." autocomplete="off" autocapitalize="off" spellcheck="false"><div class="minirow"><label><input type="checkbox" id="showToken"> 入力内容を表示</label><button class="btn" type="button" id="clearToken">トークンを消去</button></div>
+<label class="formlabel" for="token">GitHubトークン（保存OFFなら画面を閉じると消えます）</label><input type="password" id="token" placeholder="github_pat_..." autocomplete="off" autocapitalize="off" spellcheck="false"><div class="minirow"><label><input type="checkbox" id="showToken"> 入力内容を表示</label><button class="btn" type="button" id="clearToken">入力と保存を消去</button></div>
+<div class="status" id="tokenSavePanel"><label><input type="checkbox" id="rememberToken"> 🔐 この端末のブラウザにトークンを保存して、次回から自動入力する</label><div class="tiny" id="tokenSaveStatus" aria-live="polite">現在は保存OFFです。入力したトークンは画面を閉じると消えます。</div><div class="minirow" style="margin-top:9px"><button class="btn" type="button" id="deleteSavedToken">🗑 保存したトークンを削除</button></div><p class="tiny">保存先はこのサイト専用のブラウザ保存領域（localStorage）です。ブラウザのデータ消去、別の端末・ブラウザ、プライベートモードでは引き継がれません。端末を使える人や、このサイトで実行されるスクリプトに読み取られる可能性があります。</p></div>
 <label class="formlabel" for="target">更新するファイル</label><select id="target" style="width:100%;padding:13px;background:#0d1b30;color:#fff;border:1px solid #6486aa;border-radius:10px;font:inherit"><option value="index.html">🎮 index.html（ゲーム本体）</option><option value="updater.html">🛠 updater.html（この更新センター）</option></select>
 <label class="formlabel" for="commitMessage">更新メッセージ</label><input type="text" id="commitMessage" maxlength="120" value="角刈ダービー更新" autocomplete="off">
 <div class="actions"><button class="btn primary full" type="button" id="directUpload" disabled>⬆ 選択したHTMLをGitHubに直接反映</button></div>
@@ -19,7 +20,7 @@
 </div>
 <div class="card"><div class="head"><span class="num">3</span>公開状況を確認</div><div class="actions"><a class="btn primary" id="gameLink" href="https://monjasama-ops.github.io/kakugari-derby/" target="_blank" rel="noopener">🎮 公開ゲームを開く ↗</a><a class="btn" href="https://github.com/monjasama-ops/kakugari-derby/actions" target="_blank" rel="noopener">⚙ 公開処理を見る ↗</a><button class="btn" id="refresh" type="button">🔄 公開情報を取得</button><a class="btn" href="https://github.com/monjasama-ops/kakugari-derby/settings/pages" target="_blank" rel="noopener">🌐 Pages設定を開く</a></div><div class="status" id="remoteStatus" aria-live="polite">「公開情報を取得」でGitHubの公開リポジトリ情報を確認できます。</div><p class="tiny">GitHub APIから公開情報を取得します。API制限・通信環境により確認できない場合もあります。実際の公開完了はActionsの緑色チェックとゲーム画面で確認してください。</p></div>
 <div class="card"><div class="head"><span class="num">4</span>更新チェックリスト</div><div class="progress"><div id="bar"></div></div><div class="tiny" id="progressText">0 / 4 完了</div><label class="check"><input type="checkbox" data-check="0"><span>最新版のHTMLをダウンロード・確認した</span></label><label class="check"><input type="checkbox" data-check="1"><span>GitHubにHTMLをアップロードした</span></label><label class="check"><input type="checkbox" data-check="2"><span>更新の保存（コミット）が完了した</span></label><label class="check"><input type="checkbox" data-check="3"><span>公開ゲームで新機能を確認した</span></label><div class="actions"><button class="btn" id="reset">チェックをリセット</button><button class="btn" id="copyUrl">🔗 公開URLをコピー</button></div></div>
-<footer>GitHubトークンはアップロード通信時のみ使用し、ブラウザの保存領域には保存しません。チェック状態のみ保存されます。<br>このページ自体は公開可能な補助ツールです。</footer>
+<footer>GitHubトークンは保存を明示的にONにした場合だけ、このブラウザのlocalStorageに保存されます。保存OFFでは保持しません。<br>このページ自体は公開可能な補助ツールです。</footer>
 </main><script>
 'use strict';
 const $=id=>document.getElementById(id);let selectedFile=null,selectedBytes=null;
@@ -39,9 +40,35 @@ $('refresh').addEventListener('click',async()=>{const s=$('remoteStatus');s.text
 const ghApi='https://api.github.com/repos/monjasama-ops/kakugari-derby/contents/';
 let uploading=false;
 function updateUploadButton(){const ready=!!selectedBytes && /<html\b|<!doctype\s+html/i.test(selectedBytes) && !!$('token').value.trim() && !uploading;$('directUpload').disabled=!ready}
-$('token').addEventListener('input',updateUploadButton);
+const tokenStorageKey='kakugari-updater-token-optin-v1';
+function tokenSaveMessage(message){$('tokenSaveStatus').textContent=message}
+function persistTokenIfOptedIn(){
+ if(!$('rememberToken').checked)return;
+ try{const value=$('token').value.trim();if(value){localStorage.setItem(tokenStorageKey,value);tokenSaveMessage('✅ このブラウザに保存済みです。次回開いたときに自動入力します。')}else{localStorage.removeItem(tokenStorageKey);tokenSaveMessage('保存ONです。トークンを入力すると、このブラウザに保存します。')}}
+ catch(e){$('rememberToken').checked=false;tokenSaveMessage('⚠ 保存できませんでした。ブラウザの設定をご確認ください。')}
+}
+$('token').addEventListener('input',()=>{updateUploadButton();persistTokenIfOptedIn()});
+$('rememberToken').addEventListener('change',()=>{
+ if($('rememberToken').checked){
+  if(!confirm('このブラウザにGitHubトークンを保存します。保存データは暗号化された秘密保管庫ではなく、同じサイトで動くスクリプトから読み取れる可能性があります。自分専用の端末でのみ使用してください。保存しますか？')){$('rememberToken').checked=false;return}
+  persistTokenIfOptedIn();
+ }else{
+  try{localStorage.removeItem(tokenStorageKey);tokenSaveMessage('保存OFFです。保存済みトークンを削除しました。現在の入力は画面を閉じると消えます。')}
+  catch(e){tokenSaveMessage('⚠ 保存データの削除を確認できませんでした。ブラウザのサイトデータを消去してください。')}
+ }
+});
+function eraseToken(){
+ $('token').value='';$('rememberToken').checked=false;$('showToken').checked=false;$('token').type='password';
+ try{localStorage.removeItem(tokenStorageKey);tokenSaveMessage('🗑 入力と保存済みトークンを削除しました。')}
+ catch(e){tokenSaveMessage('⚠ ブラウザ保存領域を消去できませんでした。サイトデータを消去してください。')}
+ updateUploadButton();
+}
+$('deleteSavedToken').addEventListener('click',eraseToken);
+try{const saved=localStorage.getItem(tokenStorageKey);if(saved){$('token').value=saved;$('rememberToken').checked=true;tokenSaveMessage('✅ 保存済みトークンを自動入力しました。期限切れの場合は再発行してください。')}else tokenSaveMessage('保存OFFです。チェックを入れた場合だけ保存します。')}
+catch(e){tokenSaveMessage('⚠ このブラウザでは保存領域を利用できません。')}
+updateUploadButton();
 $('showToken').addEventListener('change',()=>{$('token').type=$('showToken').checked?'text':'password'});
-$('clearToken').addEventListener('click',()=>{$('token').value='';updateUploadButton()});
+$('clearToken').addEventListener('click',eraseToken);
 $('target').addEventListener('change',()=>{$('uploadStatus').textContent='更新先：'+$('target').value+'。ファイルの中身と更新先を確認してください。'});
 function encodeBase64Utf8(value){const bytes=new TextEncoder().encode(value);let binary='';const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(binary)}
 async function ghFetch(url,token,options={}){const res=await fetch(url,{...options,headers:{Accept:'application/vnd.github+json',Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28',...(options.headers||{})}});let data={};try{data=await res.json()}catch{}if(!res.ok){let message=data.message||'GitHub APIエラー';if(res.status===401)message='認証できません。トークンを確認してください。';if(res.status===403)message='権限が不足しているか、API利用制限です。Contents: Read and write とリポジトリ指定を確認してください。';if(res.status===404)message='リポジトリまたはファイルにアクセスできません。トークンの対象リポジトリを確認してください。';if(res.status===409||res.status===422)message='ほかの更新と競合した可能性があります。もう一度アップロードしてください。';throw Error(message+' (HTTP '+res.status+')')}return data}
