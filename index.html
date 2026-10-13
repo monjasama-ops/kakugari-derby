@@ -1785,6 +1785,9 @@ let forumThreads={};
 let forumVisible=10;
 let forumSerial=0;
 let forumRaceFinished=false;
+// 実際にプレイしたレースの確定結果。架空の昔話とは区別する。
+let forumRecentResults=[];
+let forumRacePicks={};
 // 常連はレースを跨いで発言や因縁を引きずる（ブラウザを閉じるとリセット）。
 const FORUM_REGULARS=[1,7,13,22,33,44,55,66,77,88];
 const FORUM_NICKNAMES={1:'全マの伝道師',7:'単勝一点おじ',13:'逆神十三号',22:'新聞切り抜き職人',33:'現地組（自称）',44:'数字しか信じない',55:'大穴しか見えない',66:'パドックの主',77:'謝罪会見常連',88:'寝癖予想家'};
@@ -2142,6 +2145,83 @@ function forumVariedLine(i,no,previous){
   }
   return forumRandom(topics);
 }
+// 直近の「実際に走った」レースを材料にする。捏造した昔話とは混同しない。
+function forumRecordRace(order){
+  if(!order||!order.length)return;
+  const rank=popularity();
+  const record={race:currentScheduledRace().name,season:seasonRaceIndex+1,
+    distance:raceDistance,weather:weather,track:trackCondition,
+    top:order.slice(0,5).map(function(i){return {index:i,name:names[i],number:raceNumber(i),rank:rank[i],odds:Number(winOdds[i]).toFixed(1)};})};
+  forumRecentResults.unshift(record);
+  if(forumRecentResults.length>12)forumRecentResults.length=12;
+  return record;
+}
+function forumRecentTalk(no,horseIndex){
+  if(!forumRecentResults.length)return '';
+  const record=forumRecentResults[Math.floor(Math.random()*Math.min(3,forumRecentResults.length))];
+  const first=record.top[0], second=record.top[1], third=record.top[2];
+  const memory=forumPerson(no);
+  const previousPick=forumRacePicks[no];
+  const talkedHorse=record.top.find(function(h){return h.index===horseIndex;});
+  const topic=forumRandom([
+    '前の'+record.race+'、'+first.name+'が'+first.rank+'番人気で勝ったのをまだ引きずってる。'+(first.rank>=6?'あれは買えんて。':'強いのは分かってた、買い方が下手だった。'),
+    record.race+'の2着'+second.name+'、あの馬連を拾えた人いる？ 俺は最後に消した。',
+    'この前の'+record.race+'は'+first.name+'→'+second.name+'→'+third.name+'。今見ても三連単の並びが難しい。',
+    record.race+'の'+record.weather+'・'+record.track+'馬場で'+first.name+'が勝ったんだから、今日の馬場も無視できん。',
+    '結果表を見直したら'+record.race+'の勝ち馬'+first.name+'、単勝'+first.odds+'倍だった。俺の買い目にはいない。',
+    talkedHorse?talkedHorse.name+'って'+record.race+'で'+(record.top.indexOf(talkedHorse)+1)+'着だったよな。今回も気になってしまう。':record.race+'で'+third.name+'が3着に残ったの、もっと話題になってよくないか。',
+    first.rank>=6?'前走の'+record.race+'で'+first.rank+'番人気が勝ったんだぞ。人気だけで切る人は反省会な。':'前走の'+record.race+'は'+first.rank+'番人気の'+first.name+'が勝った。堅いと言った奴も馬券を当てたとは限らん。',
+    'あの'+record.race+'、'+second.name+'を軸にした俺に誰か声を掛けてくれ。2着までは合ってたんだ。',
+    '俺、'+record.race+'で'+first.name+'を「消し」って書いた気がする。過去ログは見ないでほしい。',
+    'レース終わってから'+record.race+'の結果を知った嫁に「また外したの？」って言われた。何も返せなかった。'
+  ]);
+  if(memory.lastRace===record.race){
+    if(memory.lastResult==='hit' && Math.random()<.55)return '言わせてくれ。'+record.race+'の'+first.name+'は俺の本命だった。'+forumRandom(['珍しく褒めてくれ。','証人いるよな？','馬券の買い方は聞かないでくれ。']);
+    if(memory.lastResult==='miss' && Math.random()<.55)return record.race+'の俺の予想は外れた。'+forumRandom(['馬を責める気はない。','当日あんなに偉そうにしたのが恥ずかしい。','でも次も予想はする。']);
+  }
+  return topic;
+}
+function forumReplyToRecent(no,previous){
+  const source=String(previous.body||'');
+  if(!forumRecentResults.length || !/前走|前の|この前|結果表|レース終わ|着|勝ち馬|馬連|三連単|本命だった|予想は外れた/.test(source))return '';
+  const r=forumRecentResults[0], winner=r.top[0].name;
+  const reactions=[
+    'それ見てた。'+winner+'が抜け出した時、俺の買い目が終わった。',
+    '着順は合ってるけど、お前レース前は逆のこと言ってなかった？',
+    '結果だけ見たら簡単そうなんだよな。買う前に戻りたい。',
+    '分かる。'+r.race+'の2着'+r.top[1].name+'をどう拾うかで全部変わった。',
+    'その話、傷が癒えてないからやめてくれｗ',
+    '俺はあのレースで'+winner+'を褒めてた。買ったとは言ってない。',
+    '言い訳に聞こえるけど、そこは少し同意する。',
+    'ちょっと待て、お前その日「絶対来ない」って書いてなかったか？'
+  ];
+  return '>>'+previous.id+' '+forumRandom(reactions);
+}
+function forumAddDirectedPost(key,no,body,target,replyTo){
+  const arr=forumThreads[key]||(forumThreads[key]=[]);
+  const id=++forumSerial;
+  const profile=spectatorProfile(no);
+  arr.unshift({id:id,no:no,icon:FORUM_EMOJIS[no%FORUM_EMOJIS.length],profile:profile.name,
+    body:body,likes:Math.floor(Math.random()*15),age:1+Math.floor(Math.random()*7),target:target,
+    replyTo:replyTo||null,regular:FORUM_REGULARS.includes(no)});
+  return id;
+}
+function forumRecentConversation(key,record,afterFinish){
+  if(!record)return;
+  const winner=record.top[0],second=record.top[1];
+  const opening=afterFinish
+    ? '確定したぞ。'+record.race+'は'+winner.number+'番 '+winner.name+'が1着、'+second.name+'が2着。'+winner.rank+'番人気だった。'
+    : '前の'+record.race+'、'+winner.name+'が'+winner.rank+'番人気で勝った件まだ話していい？';
+  const first=forumAddDirectedPost(key,22,opening,winner.index,null);
+  const secondId=forumAddDirectedPost(key,13,'>>'+first+' その話はもういいだろ。俺は'+second.name+'を推してたんだ。惜しかったんだよ。',winner.index,first);
+  const third=forumAddDirectedPost(key,7,'>>'+secondId+' 2着を惜しいで済ませるなｗ お前レース前は「楽勝」って言ってたぞ。',winner.index,secondId);
+  forumAddDirectedPost(key,77,'>>'+third+' 横からすまん。俺も'+winner.name+'を軽く見てた。そこは素直に謝る。',winner.index,third);
+  if(winner.rank>=6){
+    forumAddDirectedPost(key,55,'>>'+first+' '+winner.rank+'番人気だったろ？ こういうのを買いたくて競馬やってるんだよ。',winner.index,first);
+  }else{
+    forumAddDirectedPost(key,44,'>>'+first+' 人気どおりでも的中したとは限らない。'+second.name+'を相手に選べたかが問題。',winner.index,first);
+  }
+}
 function forumNormalizeLine(s){return s.replace(/^>>\d+\s*/,'').replace(/\s+/g,' ').trim();}
 function makeForumPost(key,forcedHorse){
   const arr=forumThreads[key] || (forumThreads[key]=[]);
@@ -2154,7 +2234,8 @@ function makeForumPost(key,forcedHorse){
   const age=Math.max(1,Math.round((arr.length+1)*2.4+Math.random()*13));
   // 返信は元レスの内容に合わせて書く。アンカーのない投稿には返信先を付けない。
   let body;
-  if(previous && Math.random()<.79)body=forumContextReply(target,no,previous);
+  if(previous && Math.random()<.77)body=forumReplyToRecent(no,previous)||forumContextReply(target,no,previous);
+  else if(forumRecentResults.length && Math.random()<.39)body=forumRecentTalk(no,target);
   else body=Math.random()<.86?forumVariedLine(target,no,null):forumOpinion(target,no,key,null);
   const used=new Set(arr.map(function(p){return forumNormalizeLine(p.body);}));
   for(let attempt=0;attempt<35 && used.has(forumNormalizeLine(body));attempt++){
@@ -2171,6 +2252,15 @@ function resetForumThreads(){
   forumMode='race';forumHorseIndex=activeHorseIndexes()[0];
   for(let n=0;n<55;n++)makeForumPost('race',null);
   activeHorseIndexes().forEach(function(i){for(let n=0;n<19;n++)makeForumPost('horse-'+i,i);});
+  // 前走の結果を知っている常連たちの、連続したアンカー会話を上に配置。
+  if(forumRecentResults.length){
+    forumRecentConversation('race',forumRecentResults[0],false);
+    const winner=forumRecentResults[0].top[0].index;
+    if(activeHorseIndexes().includes(winner))forumRecentConversation('horse-'+winner,forumRecentResults[0],false);
+  }
+  // 新しいレースでの本命を記録し、終了後の的中・外れ判定に使う。
+  forumRacePicks={};
+  FORUM_REGULARS.forEach(function(no){forumRacePicks[no]=forumPickHorse(no);});
   renderForum();
 }
 function renderForum(){
@@ -2219,17 +2309,20 @@ function addForumConversation(){
 }
 function forumAfterRace(order){
   forumRaceFinished=true;
+  const actualRecord=forumRecordRace(order);
   // 前レースの的中・外れを常連が次走でも覚えている。
   FORUM_REGULARS.forEach(function(no){
     const m=forumPerson(no);
-    if(m.pick!==null&&order&&order.length){
-      m.lastResult=order[0]===m.pick?'hit':'miss';
+    if(forumRacePicks[no]!==undefined&&order&&order.length){
+      m.lastResult=order[0]===forumRacePicks[no]?'hit':'miss';
       m.lastRace=currentScheduledRace().name;
       if(m.lastResult==='miss')m.losses++;else m.apologies++;
     }
   });
   for(let n=0;n<9;n++)makeForumPost('race',null);
   if(order&&order.length){for(let n=0;n<5;n++)makeForumPost('horse-'+order[0],order[0]);}
+  forumRecentConversation('race',actualRecord,true);
+  if(order&&order.length)forumRecentConversation('horse-'+order[0],actualRecord,true);
   renderForum();
 }
 
@@ -4352,6 +4445,7 @@ function showSeasonResult(){
 function restartSeason(){
   // money / debt は触らない。
   seasonRaceIndex=0;
+  forumRecentResults=[];
   seasonStartMoney=money;
   seasonStartDebt=debt;
   seasonBetTotal=0;
@@ -4500,8 +4594,10 @@ try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSI
 <div class="update-history-overlay" id="updateHistoryOverlay" role="dialog" aria-modal="true" aria-labelledby="updateHistoryHeading" onclick="if(event.target===this)closeUpdateHistory()">
   <div class="update-history-dialog">
     <h2 id="updateHistoryHeading">📋 角刈ダービー 更新履歴</h2>
-    <p style="color:#64748b">最新版：2026年10月13日（掲示板・マノファイナンス調整）</p>
-    <h3>🆕 2026/10/13</h3>
+    <p style="color:#64748b">最新版：2026年10月13日（直近レースの記憶・会話型掲示板）</p>
+    <h3>🆕 2026/10/13 追加更新</h3>
+    <ul><li>掲示板がゲーム内の直近レースの勝ち馬・着順・人気・オッズ・馬場を記憶し、次のレースでも話題にします。</li><li>常連同士のアンカー会話を連続生成。予想の的中自慢・外れた言い訳・謝罪・反論を追加。</li><li>実際のゲーム内結果と、掲示板だけの架空の昔話を区別しました。</li></ul>
+    <h3>2026/10/13</h3>
     <ul><li>更新履歴ボタンを設置。新しい版を開いた最初の1回だけ自動表示します。</li><li>掲示板のアンカーレスを会話の内容に合わせて生成。返信元へジャンプできるよう改善。</li><li>マノファイナンスの利息を1レースごとに5%→10%へ変更（複利）。</li></ul>
     <h3>2026/10/12〜13</h3>
     <ul><li>出馬表の人気順・オッズ順ソートと馬別掲示板を追加。</li><li>競馬おじさんの架空の過去レース談義・レスバ・常連の因縁・日常雑談を拡充。</li><li>掲示板を初期状態で折りたたむ仕様に変更。</li><li>馬券購入画面を一覧形式にリニューアル。</li></ul>
