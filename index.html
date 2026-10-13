@@ -588,7 +588,7 @@ h1{color:#134c38;letter-spacing:.045em}
   <b>👩‍💼 マノファイナンス</b>
   <div class="loanhint">
     レース終了後に「次のレース」を押した時点で所持金が1,000円未満だと、お姉さんがにこやかに10万円を強制融資します。<br>
-    借金残高には1レース終了ごとに5%の利息が加算されます。<br>
+    借金残高には1レース終了ごとに10%の利息（複利）が加算されます。<br>
     所持金が「借金残高＋10,000円」以上になると自動で全額返済します。
   </div>
 </div>
@@ -630,7 +630,7 @@ h1{color:#134c38;letter-spacing:.045em}
   <details class="forum-collapsible" id="raceForumAnchor">
     <summary class="forum-collapse-toggle">💬 競馬おじさん掲示板 <span class="forum-collapse-hint">クリックして開く・閉じる</span></summary>
   <div class="forum-panel" id="raceForum">
-    <div class="forum-top"><strong>🏇 角刈競馬・みんなの予想掲示板</strong><small>架空の観客が勝手に討論中！</small></div>
+    <div class="forum-top"><strong>🏇 角刈競馬・みんなの予想掲示板</strong><small>競馬好きのおじさんたちが雑談中！</small></div>
     <div class="forum-tabs">
       <button type="button" class="forum-tab active" id="forumRaceTab" onclick="switchForum('race')">🏟️ レース全体</button>
       <button type="button" class="forum-tab" id="forumHorseTab" onclick="switchForum('horse')">🐴 馬ごとの掲示板</button>
@@ -1801,7 +1801,7 @@ function forumRegularNo(){return FORUM_REGULARS[Math.floor(Math.random()*FORUM_R
 function forumOldReceipt(no){
   const m=forumPerson(no);
   if(!m.lastLine)return '';
-  return 'おじさん'+no+'号、前に「'+m.lastLine.slice(0,42)+'」って言ってたよな。スクショ撮ってあるぞ。';
+  return 'おじさん'+no+'号、前はずいぶん強気だったよな。あの予想、俺は忘れてないぞｗ';
 }
 const FORUM_EMOJIS=['👨','🧢','👴','🥸','👨‍🦳','🧔','👓','😎','🧑‍🌾','🎩'];
 function forumEscape(value){return String(value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -1830,11 +1830,11 @@ function forumFakeHistory(i,no){
   const name=forumTargetName(i), opponent=forumTargetName(other);
   const stories=[
     '昔の'+race+'で'+name+'が'+FORUM_LORE_VERBS[(i+no)%FORUM_LORE_VERBS.length]+'のを見てないのか？ あれは伝説。',
-    '架空の昨年'+race+'、'+name+'が'+opponent+'をクビ差で退けたのを俺は忘れない。',
+    '去年の'+race+'、'+name+'が'+opponent+'をクビ差で退けたのを俺は忘れない。',
     name+'は幻の'+race+'で単勝'+(12+(i*7+no)%79)+'.'+(no%10)+'倍をひっくり返した名馬だぞ。',
     '前回の'+race+'で'+name+'が上がり最速を出した件、もっと評価されていい。',
-    'お前ら'+race+'の'+name+'を忘れたのか？ あの日は競馬場が揺れた（という設定）。',
-    '架空の'+race+'で'+name+'が勝った時、俺の馬券だけなぜか外れた。今でも納得いかん。'
+    'お前ら'+race+'の'+name+'を忘れたのか？ あの日は競馬場が揺れたな。',
+    '昔の'+race+'で'+name+'が勝った時、俺の馬券だけなぜか外れた。今でも納得いかん。'
   ];
   return stories[(i+no)%stories.length];
 }
@@ -1843,13 +1843,13 @@ function forumBanter(i,no,replyTo){
   const replies=[
     '>>'+replyTo+' また幻のレースを持ち出してるｗ 記録どこにあるんだよ。',
     '>>'+replyTo+' そのレース、俺の記憶だと'+name+'は3着だったぞ。',
-    '>>'+replyTo+' ソースは？「俺が現地にいた」はソースにならんぞ。',
+    '>>'+replyTo+' それ本当に見たのか？ 毎回着差が違うぞ。',
     '>>'+replyTo+' いやあの時は強かった。見てないなら黙っててくれ。',
     '>>'+replyTo+' 去年も同じこと言って馬券外してただろｗ',
     '>>'+replyTo+' その理論なら俺の寝癖もGⅠ馬になれるわ。',
     '>>'+replyTo+' 認めたくないだろうが'+name+'の実力は本物。',
     '>>'+replyTo+' お前が推すと来ないから今日は黙っててくれ。',
-    '>>'+replyTo+' ここまで全部架空の思い出で草。',
+    '>>'+replyTo+' その話、毎回結末が変わるの何なんだｗ',
     '>>'+replyTo+' はいはい、レース終わったらまた集合な。'
   ];
   return replies[(no+i+replyTo)%replies.length];
@@ -1896,7 +1896,6 @@ function forumHumanDrama(i,no,replyTo){
 }
 function forumContextReply(i,no,previous){
   const source=String(previous.body||'').replace(/^>>\d+\s*/, '').trim();
-  const quoted=source.length>40?source.slice(0,39)+'…':source;
   const horseName=forumTargetName(previous.target===undefined?i:previous.target);
   const ownHorse=forumTargetName(i);
   const lower=source;
@@ -1925,7 +1924,8 @@ function forumContextReply(i,no,previous){
     'その点だけは認める。',
     'まあ予想が違うから面白いんだけどな。'
   ]);
-  return '>>'+previous.id+' '+prefix+'「'+quoted+'」についてだけど、'+forumRandom(reactions)+' '+suffix;
+  const starts=['','いや、','待て待て、','横から失礼。','それな。','んー、','ちょっと違うと思う。'];
+  return '>>'+previous.id+' '+prefix+forumRandom(starts)+forumRandom(reactions)+(Math.random()<.58?' '+suffix:'');
 }
 function forumTargetedReply(i,no,previous){
   const who=previous.no, name=forumTargetName(i);
@@ -1933,13 +1933,17 @@ function forumTargetedReply(i,no,previous){
   const rival=FORUM_RIVALS[no]===who;
   const lines=[
     '>>'+previous.id+' いや、その理屈は分かる。でも'+name+'を軽く見るなよ。',
-    '>>'+previous.id+' それ昨日と真逆のこと言ってない？',
+    '>>'+previous.id+' それ前と真逆のこと言ってない？',
     '>>'+previous.id+' ちょっと言い過ぎた、ごめん。予想自体は変えないけど。',
     '>>'+previous.id+' 正直その意見は参考になった。悔しいけど。',
     '>>'+previous.id+' 俺も同じこと考えてた。お前とは一生分かり合えないと思ってたのに。',
-    '>>'+previous.id+' その馬券、当たったら焼肉おごってくれ。',
+    '>>'+previous.id+' その予想が当たったら焼肉おごってくれ。',
     '>>'+previous.id+' それはさすがに結果論だろｗ',
-    '>>'+previous.id+' 予想は違うが、'+name+'の走りを見たいのは同じだ。'
+    '>>'+previous.id+' 予想は違うが、'+name+'の走りを見たいのは同じだ。',
+    '>>'+previous.id+' いや分かるよ。分かるけど俺は買えない。',
+    '>>'+previous.id+' そこは認める。さっき言い過ぎたわ。',
+    '>>'+previous.id+' ちょっと待って、馬場の話が抜けてるぞ。',
+    '>>'+previous.id+' それな。結局買い方が難しいんだよ。'
   ];
   if(rival)lines.push('>>'+previous.id+' おじさん'+who+'号、お前とは今日こそ決着つける。前回の借りがある。');
   if(previous.no===no)lines.push('>>'+previous.id+' 自分の書き込みにレスするけど、さっきの予想は訂正する。');
@@ -2006,7 +2010,7 @@ function forumOpinion(i,no,mode,replyTo){
   ];
   // 昔の（架空の）名勝負自慢、持ち上げ、レスバを混ぜる。
   if(Math.random()<.42)pool=pool.concat([forumHumanDrama(i,no,replyTo),forumHumanDrama(i,no,replyTo)]);
-  if(Math.random()<.35)pool=pool.concat([forumFakeHistory(i,no),forumFakeHistory(i,no+3)]);
+  if(Math.random()<.12)pool=pool.concat([forumFakeHistory(i,no)]);
   if(replyTo && Math.random()<.68)return forumBanter(i,no,replyTo);
   if(replyTo){
     const agree=['>>'+replyTo+' それは分かる。でも'+horseName+'も捨てられん。','>>'+replyTo+' いやいや、展開を甘く見すぎだろ。'+horseName+'が怖い。','>>'+replyTo+' その理屈なら'+horseName+'も候補に入るだろ。','>>'+replyTo+' 逆にそれがフラグなんだよなあ。','>>'+replyTo+' オッズ見てから言ってくれ。俺は'+horseName+'派。','>>'+replyTo+' それ先週も言ってなかったか？ｗ','>>'+replyTo+' 俺は反対。'+horseName+'のほうが面白い。'];
@@ -2127,13 +2131,12 @@ function forumVariedLine(i,no,previous){
   const topics=[
     intro+forumRandom(concrete)+' '+end,
     forumRandom(FORUM_LIFE_LINES)+' ところで'+h+'、どう思う？',
-    '架空の'+forumRandom(FORUM_FAKE_RACES)+'で'+h+'が'+forumRandom(FORUM_LORE_VERBS)+'のを覚えてる。'+forumRandom(['俺だけ？','あの時の実況が忘れられん。','あの馬券は今も机にある（架空）。','証拠はないが記憶だけは鮮明。']),
+    '昔の'+forumRandom(FORUM_FAKE_RACES)+'で'+h+'が'+forumRandom(FORUM_LORE_VERBS)+'のを覚えてる。'+forumRandom(['俺だけ？','あの時の実況が忘れられん。','あの馬券は今も机にある。','証拠はないが記憶だけは鮮明。']),
     intro+forumRandom(FORUM_ARGUMENTS)+' '+h+'と'+comparison+'の比較で考え直した。',
     'おじさん'+no+'号の結論：'+h+'は'+forumRandom(['単勝で勝負','複勝で様子見','三連複の相手','馬連の軸候補','あえて見送り','応援だけする'])+'。'+end
   ];
   if(previous){
-    const quote=previous.body.replace(/^>>\d+\s*/,'').slice(0,25);
-    topics.push('>>'+previous.id+' 「'+quote+'…」って話、'+forumRandom(FORUM_REACTION_LINES)+' '+h+'の評価はまだ変えない。');
+    topics.push('>>'+previous.id+' '+forumRandom(FORUM_REACTION_LINES)+(Math.random()<.5?' '+h+'の評価はまだ変えない。':''));
     topics.push('>>'+previous.id+' '+forumRandom(FORUM_REACTION_LINES)+' '+forumRandom(['俺は'+h+'派。','その点は'+comparison+'も同じ。','レース後に答え合わせだ。','ただ馬券は自己責任な。']));
     if(FORUM_RIVALS[no]===previous.no)topics.push('>>'+previous.id+' おじさん'+previous.no+'号、またお前か。'+forumRandom(FORUM_REACTION_LINES)+' '+h+'だけは譲らん。');
     if(previous.no===no)topics.push('>>'+previous.id+' 自分のレスを訂正。'+h+'の評価はそのままだが、言い方が雑だった。');
@@ -2161,7 +2164,6 @@ function forumRecentTalk(no,horseIndex){
   const record=forumRecentResults[Math.floor(Math.random()*Math.min(3,forumRecentResults.length))];
   const first=record.top[0], second=record.top[1], third=record.top[2];
   const memory=forumPerson(no);
-  const previousPick=forumRacePicks[no];
   const talkedHorse=record.top.find(function(h){return h.index===horseIndex;});
   const topic=forumRandom([
     '前の'+record.race+'、'+first.name+'が'+first.rank+'番人気で勝ったのをまだ引きずってる。'+(first.rank>=6?'あれは買えんて。':'強いのは分かってた、買い方が下手だった。'),
@@ -2172,7 +2174,7 @@ function forumRecentTalk(no,horseIndex){
     talkedHorse?talkedHorse.name+'って'+record.race+'で'+(record.top.indexOf(talkedHorse)+1)+'着だったよな。今回も気になってしまう。':record.race+'で'+third.name+'が3着に残ったの、もっと話題になってよくないか。',
     first.rank>=6?'前走の'+record.race+'で'+first.rank+'番人気が勝ったんだぞ。人気だけで切る人は反省会な。':'前走の'+record.race+'は'+first.rank+'番人気の'+first.name+'が勝った。堅いと言った奴も馬券を当てたとは限らん。',
     'あの'+record.race+'、'+second.name+'を軸にした俺に誰か声を掛けてくれ。2着までは合ってたんだ。',
-    '俺、'+record.race+'で'+first.name+'を「消し」って書いた気がする。過去ログは見ないでほしい。',
+    '俺、'+record.race+'で'+first.name+'を切った気がする。過去ログは見ないでほしい。',
     'レース終わってから'+record.race+'の結果を知った嫁に「また外したの？」って言われた。何も返せなかった。'
   ]);
   if(memory.lastRace===record.race){
@@ -2280,7 +2282,7 @@ function renderForum(){
   document.getElementById('forumThreadCount').textContent=arr.length+'件のレス';
   container.innerHTML=arr.slice(0,forumVisible).map(function(post){
     return '<article class="forum-post" id="forum-post-'+post.id+'"><div class="forum-avatar">'+post.icon+'</div><div class="forum-content">'+
-      '<div class="forum-post-meta"><b>おじさん'+post.no+'号</b>'+(FORUM_NICKNAMES[post.no]?'<span class="forum-nickname">'+forumEscape(FORUM_NICKNAMES[post.no])+'</span>':'')+'<span class="forum-role">'+forumEscape(post.profile)+'</span><span>No.'+post.id+'</span><span>架空・'+post.age+'分前</span></div>'+
+      '<div class="forum-post-meta"><b>おじさん'+post.no+'号</b>'+(FORUM_NICKNAMES[post.no]?'<span class="forum-nickname">'+forumEscape(FORUM_NICKNAMES[post.no])+'</span>':'')+'<span class="forum-role">'+forumEscape(post.profile)+'</span><span>No.'+post.id+'</span><span>'+post.age+'分前</span></div>'+
       '<div class="forum-post-body">'+forumEscape(post.body).replace(/&gt;&gt;(\d+)/g,function(_,id){return '<button type="button" class="forum-reply-link" onclick="jumpForumReply('+id+')">&gt;&gt;'+id+'</button>';})+'</div>'+
       '<div class="forum-post-foot"><span class="likes">👍 '+post.likes+'</span><span>💬 予想・雑談</span></div></div></article>';
   }).join('') || '<div class="forum-post">まだレスがありません。</div>';
@@ -3147,7 +3149,7 @@ function ensureManoFinance(){
 }
 
 function applyRaceDebtInterest(){
-  // 借金がある場合、レース終了ごとに残高へ5%複利で加算。
+  // 借金がある場合、レース終了ごとに残高へ10%複利で加算。
   if(debt<=0)return 0;
   const before=debt;
   debt=Math.round(debt*(1+loanInterest));
@@ -4553,7 +4555,7 @@ document.getElementById('stake').addEventListener('input',function(){
 
 loadHorseSettings();
 renderHorseEditor();
-const KAKUGARI_UPDATE_VERSION='2026-10-13-forum-replies-mano10';
+const KAKUGARI_UPDATE_VERSION='2026-10-13-forum-natural-talk-mano10-fix';
 function showUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.add('is-open');}
 function closeUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.remove('is-open');try{localStorage.setItem('kakugari-last-seen-update',KAKUGARI_UPDATE_VERSION);}catch(e){}}
 prepareRace();
@@ -4595,7 +4597,9 @@ try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSI
   <div class="update-history-dialog">
     <h2 id="updateHistoryHeading">📋 角刈ダービー 更新履歴</h2>
     <p style="color:#64748b">最新版：2026年10月13日（直近レースの記憶・会話型掲示板）</p>
-    <h3>🆕 2026/10/13 追加更新</h3>
+    <h3>🆕 2026/10/13 掲示板の自然な会話・表示修正</h3>
+    <ul><li>掲示板の各投稿に付いていた「架空」の表示を削除。架空の投稿である旨は掲示板下部の注意書きに集約しました。</li><li>アンカー返信での長い引用・かぎ括弧の連発を減らし、短い相づち・反論・謝罪を増やしました。</li><li>マノファイナンスの画面上の利息表示を、実際の計算どおり10%（複利）に修正しました。</li></ul>
+    <h3>2026/10/13 追加更新</h3>
     <ul><li>掲示板がゲーム内の直近レースの勝ち馬・着順・人気・オッズ・馬場を記憶し、次のレースでも話題にします。</li><li>常連同士のアンカー会話を連続生成。予想の的中自慢・外れた言い訳・謝罪・反論を追加。</li><li>実際のゲーム内結果と、掲示板だけの架空の昔話を区別しました。</li></ul>
     <h3>2026/10/13</h3>
     <ul><li>更新履歴ボタンを設置。新しい版を開いた最初の1回だけ自動表示します。</li><li>掲示板のアンカーレスを会話の内容に合わせて生成。返信元へジャンプできるよう改善。</li><li>マノファイナンスの利息を1レースごとに5%→10%へ変更（複利）。</li></ul>
