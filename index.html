@@ -1978,6 +1978,128 @@ function forumOpinion(i,no,mode,replyTo){
   }
   return forumRandom(pool);
 }
+// セリフを固定文の抽選から「話題×立場×口癖×具体的な数字」の組み立て式へ。
+// レース内で既出の文は再抽選し、同じ文章の連投を抑える。
+const FORUM_TALK_OPENERS=[
+  '朝のコーヒー飲みながら考えたんだけど、','出勤前にひとつだけ言わせて。',
+  'さっきの予想を訂正する。','新聞を三回読み直した結果、',
+  '昨日は強気だったが今は少し迷ってる。','うちの猫は反対してるが、',
+  'ここだけの話にしてくれ。','誰も聞いてないだろうけど、',
+  'この時間に書くのも何だけど、','先に謝っておく。',
+  'いったん感情を抜きにして、','長年見てきた勘なんだが、',
+  'いや待て、ちょっと気付いた。','息子には笑われたけど、',
+  '財布と相談した結果、','パドックを脳内再生してみた。',
+  'ここで逆張りしておく。','みんな冷静になれ。',
+  'さっきコンビニで思いついた。','風呂上がりに結論が出た。',
+  '昨日の俺と今日の俺は違う。','昼休みがあと3分しかない。',
+  '正直に白状すると、','このスレに書くか10分悩んだ。'
+];
+const FORUM_TALK_ENDINGS=[
+  '異論は認める。','反論はレース後に聞く。','これ保存しといて。',
+  '外れたら笑ってくれ。','当たったら褒めてくれよ。','自信は五分五分。',
+  'まあ俺の馬券だからな。','家族には内緒だ。','明日には意見が変わるかもしれん。',
+  'これは予言じゃなくて願望だ。','お前らも後悔するなよ。','一周回って怖くなってきた。',
+  '誰か止めてくれ。','ただの独り言だと思ってくれ。','とりあえずメモした。',
+  'こういう時に限って来ないんだよな。','言ったからには引けない。',
+  '反省会の席は確保してある。','信じるかどうかは任せる。',
+  'もう寝る。たぶん。','俺の予想帳にはそう書いてある。','その顔でこっちを見るな。'
+];
+const FORUM_ARGUMENTS=[
+  '単勝の売れ方だけで能力を決めるな。','馬場が変われば序列なんてひっくり返る。',
+  '一番怖いのは人気じゃなくて展開だ。','調子が良い日に限って人気がない。',
+  '距離適性を軽く見る人が多すぎる。','スタートで半馬身遅れたら計算が全部崩れる。',
+  '追い込みが決まるかどうかは先行勢次第。','数字が正しくても買い方を間違えれば負ける。',
+  '複勝なら安心って誰が決めたんだ。','直線だけで競馬が終わると思うな。',
+  '大外だから不利って決めつけるのは早い。','一度の凡走で見限るのはもったいない。',
+  '名前で選ぶなと言われると逆に選びたくなる。','全員が同じ本命ならむしろ疑いたい。',
+  '勝つ馬と馬券で買う馬は別の話だ。','穴馬に必要なのは理由より勇気、とは限らん。',
+  'オッズが下がった瞬間に評価を変えるのは変だ。','過去の名勝負と今日の調子は別物だ。'
+];
+const FORUM_LIFE_LINES=[
+  '妻から「馬より家事を見ろ」と言われた。正論なので黙った。',
+  '競馬新聞を冷蔵庫に入れてしまった。予想で頭がいっぱいだ。',
+  '孫に馬の名前を読ませたら俺より詳しかった。',
+  '会社の昼休みが終わる。俺の予想だけ置いていく。',
+  '昨日の負けを取り戻そうとしてる時点で冷静じゃないのは分かってる。',
+  '買い目を減らすつもりが増えた。毎回これだ。',
+  '馬券を買わないで観戦する練習をしている。難しい。',
+  '今週は節約すると決めたので、まず予想だけする。',
+  '競馬仲間と口論して帰ったのに、もうここで話したくなってる。',
+  '俺が見てない時だけ当たるの何なんだ。',
+  '焼きそば食べながら予想したらソースを新聞にこぼした。',
+  '家族に勝った報告だけしてるせいで天才だと思われている。',
+  'パドックを見る目はない。でも見るのが好きなんだ。',
+  '今日は馬券より先に散歩してきた。少し落ち着いた。',
+  '「最後の一点」って言いながらもう五点追加した。',
+  '俺が引退宣言したのは競馬じゃなくて夜更かしの方だ。',
+  '買ったつもりで予想してるのに心拍数だけ上がる。',
+  '前のレースで負けたけど、馬は悪くない。俺の買い方が悪い。',
+  '新聞の赤丸が多すぎて何を信じていたのか分からない。',
+  'このスレの誰かが当たると自分のことみたいに嬉しい。悔しいけど。'
+];
+const FORUM_REACTION_LINES=[
+  'そう言い切るのは危ないと思う。','その視点はなかった、ちょっと悔しい。',
+  '言い方は嫌いだが中身には同意する。','それはデータじゃなくて願望だろｗ',
+  '俺も昔そう考えて大負けした。','そこまで言うなら買い目を晒してくれ。',
+  '論点ずらすな、今は展開の話だ。','分かるけど最後の一文が余計だ。',
+  'ごめん、さっきは俺の読み違いだった。','意見は違うけどその熱量は好きだ。',
+  '話が逸れてるぞ、でもちょっと面白い。','その発言、レース後に読み返そうな。',
+  '急にまともなこと言うな、調子が狂う。','それ俺が三日前に言ったやつだ。',
+  '予想が当たってから威張ってくれ。','今日は珍しくお前に乗ってみる。',
+  'それで結局どの馬を買うんだよ。','先週は俺が悪かった、今回は譲らん。',
+  '言い争ってる場合じゃない、締切が近い。','そんなに怒るな、競馬を楽しもうぜ。'
+];
+function forumVariedLine(i,no,previous){
+  const h=forumTargetName(i), rank=popularity()[i], odds=Number(winOdds[i]).toFixed(1);
+  const race=currentScheduledRace().name;
+  const rival=FORUM_RIVALS[no], mem=forumPerson(no);
+  const j=Math.floor(Math.random()*1000);
+  const other=activeHorseIndexes().filter(function(x){return x!==i;});
+  const comparison=other.length?forumTargetName(forumRandom(other)):h;
+  const intro=forumRandom(FORUM_TALK_OPENERS), end=forumRandom(FORUM_TALK_ENDINGS);
+  const concrete=[
+    h+'の'+rank+'番人気、単勝'+odds+'倍はどうにも気になる。',
+    h+'を軸にするか、'+comparison+'との二頭軸にするかで揉めてる。',
+    '今日の'+race+'は'+h+'の'+raceStyle[i]+'が鍵だと思う。',
+    h+'の'+raceDistance+'m適性を買いたい。'+comparison+'とは評価が割れる。',
+    h+'は人気以上にやれると思う。理由は'+forumRandom(FORUM_ARGUMENTS),
+    '単勝'+odds+'倍なら'+h+'を見送りにくい。'+forumRandom(FORUM_ARGUMENTS),
+    comparison+'の方が堅いと言われても、俺は'+h+'の一発を待つ。',
+    h+'が勝ったら、前に'+comparison+'を推してた件は忘れてほしい。',
+    '買い目を'+(1+j%9)+'点に絞るつもりが'+(10+j%35)+'点になった。'+h+'のせいだ。',
+    'このレースは'+h+'を褒めたい。でも'+comparison+'も怖い。',
+    h+'を消した途端に来る気がする。俺の競馬人生ずっとそう。',
+    '調子は'+(raceConditionState[i]||'平常')+'。それをどう読むかで意見が割れるな。'
+  ];
+  if(no===1 && activeHorseIndexes().includes(5))concrete.push(
+    '全マ教徒としてはヒザマズキナサイ一択。'+comparison+'の強さも認めるが信仰は曲げない。',
+    'ヒザマズキナサイが'+race+'を走る、それだけで今日は良い日だ。'
+  );
+  if(rival)concrete.push('おじさん'+rival+'号の意見だけは読んだ。腹立つけど一理ある。'+h+'で決着だ。');
+  if(mem.lastResult==='miss')concrete.push('前回の外れを引きずってる。だから今回は'+h+'を慎重に見てる。');
+  if(mem.lastResult==='hit')concrete.push('前回当てた勢いで'+h+'も買いたいが、調子に乗ると危ない。');
+  const topics=[
+    intro+forumRandom(concrete)+' '+end,
+    forumRandom(FORUM_LIFE_LINES)+' ところで'+h+'、どう思う？',
+    '架空の'+forumRandom(FORUM_FAKE_RACES)+'で'+h+'が'+forumRandom(FORUM_LORE_VERBS)+'のを覚えてる。'+forumRandom(['俺だけ？','あの時の実況が忘れられん。','あの馬券は今も机にある（架空）。','証拠はないが記憶だけは鮮明。']),
+    intro+forumRandom(FORUM_ARGUMENTS)+' '+h+'と'+comparison+'の比較で考え直した。',
+    'おじさん'+no+'号の結論：'+h+'は'+forumRandom(['単勝で勝負','複勝で様子見','三連複の相手','馬連の軸候補','あえて見送り','応援だけする'])+'。'+end
+  ];
+  if(previous){
+    const quote=previous.body.replace(/^>>\d+\s*/,'').slice(0,25);
+    topics.push('>>'+previous.id+' 「'+quote+'…」って話、'+forumRandom(FORUM_REACTION_LINES)+' '+h+'の評価はまだ変えない。');
+    topics.push('>>'+previous.id+' '+forumRandom(FORUM_REACTION_LINES)+' '+forumRandom(['俺は'+h+'派。','その点は'+comparison+'も同じ。','レース後に答え合わせだ。','ただ馬券は自己責任な。']));
+    if(FORUM_RIVALS[no]===previous.no)topics.push('>>'+previous.id+' おじさん'+previous.no+'号、またお前か。'+forumRandom(FORUM_REACTION_LINES)+' '+h+'だけは譲らん。');
+    if(previous.no===no)topics.push('>>'+previous.id+' 自分のレスを訂正。'+h+'の評価はそのままだが、言い方が雑だった。');
+  }
+  if(forumRaceFinished && lastFinalOrder && lastFinalOrder.length){
+    const winner=forumTargetName(lastFinalOrder[0]);
+    topics.push('結果は'+winner+'か。'+forumRandom(['素直に強かった。','買えなかった自分が悔しい。','昨日の俺に教えたい。','勝った人おめでとう。','予想は外れたけどいいレースだった。']));
+    topics.push('>>'+(previous?previous.id:1)+' '+winner+'の勝ち方、'+forumRandom(['完敗だわ。','これは認めざるを得ない。','俺の予想帳には載ってない。','次こそ取り返す。']));
+  }
+  return forumRandom(topics);
+}
+function forumNormalizeLine(s){return s.replace(/^>>\d+\s*/,'').replace(/\s+/g,' ').trim();}
 function makeForumPost(key,forcedHorse){
   const arr=forumThreads[key] || (forumThreads[key]=[]);
   // 常連の登場頻度を上げ、レスは実在する同スレッドの書き込みに向ける。
@@ -1990,6 +2112,12 @@ function makeForumPost(key,forcedHorse){
   let body=forumOpinion(target,no,key,previous?previous.id:null);
   if(previous&&Math.random()<.63)body=forumTargetedReply(target,no,previous);
   else if(Math.random()<.28)body=forumHumanDrama(target,no,previous?previous.id:null);
+  // 既存の短い定型文よりも組み立て式の発言を多めに使う。
+  if(Math.random()<.84)body=forumVariedLine(target,no,previous);
+  const used=new Set(arr.map(function(p){return forumNormalizeLine(p.body);}));
+  for(let attempt=0;attempt<35 && used.has(forumNormalizeLine(body));attempt++){
+    body=forumVariedLine(target,no,previous);
+  }
   const memory=forumPerson(no);
   memory.pick=target;
   memory.lastLine=body;
