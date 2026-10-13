@@ -531,6 +531,7 @@ h1{color:#134c38;letter-spacing:.045em}
 .forum-content{flex:1;min-width:0}
 .forum-post-meta{display:flex;align-items:center;flex-wrap:wrap;gap:7px;font-size:.76rem;color:#76817a}
 .forum-post-meta b{color:#265a43;font-size:.84rem}
+.forum-nickname{color:#955a18;background:#fff3d8;border:1px solid #f0dfb6;border-radius:4px;padding:1px 5px;font-size:.68rem;font-weight:700}
 .forum-role{background:#eef5ef;color:#3b6950;border-radius:12px;padding:2px 7px;font-size:.69rem}
 .forum-post-body{font-size:.9rem;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
 .forum-reply{color:#2472a3;font-size:.8rem;font-weight:700}
@@ -1774,6 +1775,21 @@ let forumThreads={};
 let forumVisible=10;
 let forumSerial=0;
 let forumRaceFinished=false;
+// 常連はレースを跨いで発言や因縁を引きずる（ブラウザを閉じるとリセット）。
+const FORUM_REGULARS=[1,7,13,22,33,44,55,66,77,88];
+const FORUM_NICKNAMES={1:'全マの伝道師',7:'単勝一点おじ',13:'逆神十三号',22:'新聞切り抜き職人',33:'現地組（自称）',44:'数字しか信じない',55:'大穴しか見えない',66:'パドックの主',77:'謝罪会見常連',88:'寝癖予想家'};
+const FORUM_RIVALS={7:13,13:7,22:33,33:22,44:55,55:44,66:88,88:66,1:77,77:1};
+let forumMemory={};
+function forumPerson(no){
+  if(!forumMemory[no])forumMemory[no]={pick:null,boasts:0,losses:0,grudges:0,apologies:0,lastLine:'',lastRace:'',lastResult:null};
+  return forumMemory[no];
+}
+function forumRegularNo(){return FORUM_REGULARS[Math.floor(Math.random()*FORUM_REGULARS.length)];}
+function forumOldReceipt(no){
+  const m=forumPerson(no);
+  if(!m.lastLine)return '';
+  return 'おじさん'+no+'号、前に「'+m.lastLine.slice(0,42)+'」って言ってたよな。スクショ撮ってあるぞ。';
+}
 const FORUM_EMOJIS=['👨','🧢','👴','🥸','👨‍🦳','🧔','👓','😎','🧑‍🌾','🎩'];
 function forumEscape(value){return String(value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function forumRandom(list){return list[Math.floor(Math.random()*list.length)];}
@@ -1790,6 +1806,100 @@ function forumPickHorse(no){
   else if(profile.name==='穴党'||profile.name==='逆張りおじさん')chosen=active.slice().sort(function(a,b){return rank[b]-rank[a];})[Math.floor(Math.random()*Math.min(5,active.length))];
   else if(profile.name==='距離適性派')chosen=active.slice().sort(function(a,b){return distanceTrait(b)-distanceTrait(a);})[Math.floor(Math.random()*Math.min(5,active.length))];
   return chosen;
+}
+// 掲示板だけに存在する架空の過去レース記録。実際の年間GⅠ成績とは別の噂話。
+const FORUM_FAKE_RACES=['角刈記念','モジャモジャ杯','藤岡大賞典','おじさんステークス','全マ特別','深夜の反省会杯','秋の寝癖記念','幻の第0回角刈ダービー'];
+const FORUM_LORE_VERBS=['大外一気で差し切った','逃げ切った','最後方からごぼう抜きした','鼻差で勝った','写真判定で勝った','直線で二段ロケットを決めた','出遅れから巻き返した'];
+function forumFakeHistory(i,no){
+  const race=FORUM_FAKE_RACES[(i*3+no)%FORUM_FAKE_RACES.length];
+  const rival=activeHorseIndexes().filter(function(h){return h!==i;});
+  const other=rival.length?rival[(i+no)%rival.length]:i;
+  const name=forumTargetName(i), opponent=forumTargetName(other);
+  const stories=[
+    '昔の'+race+'で'+name+'が'+FORUM_LORE_VERBS[(i+no)%FORUM_LORE_VERBS.length]+'のを見てないのか？ あれは伝説。',
+    '架空の昨年'+race+'、'+name+'が'+opponent+'をクビ差で退けたのを俺は忘れない。',
+    name+'は幻の'+race+'で単勝'+(12+(i*7+no)%79)+'.'+(no%10)+'倍をひっくり返した名馬だぞ。',
+    '前回の'+race+'で'+name+'が上がり最速を出した件、もっと評価されていい。',
+    'お前ら'+race+'の'+name+'を忘れたのか？ あの日は競馬場が揺れた（という設定）。',
+    '架空の'+race+'で'+name+'が勝った時、俺の馬券だけなぜか外れた。今でも納得いかん。'
+  ];
+  return stories[(i+no)%stories.length];
+}
+function forumBanter(i,no,replyTo){
+  const name=forumTargetName(i);
+  const replies=[
+    '>>'+replyTo+' また幻のレースを持ち出してるｗ 記録どこにあるんだよ。',
+    '>>'+replyTo+' そのレース、俺の記憶だと'+name+'は3着だったぞ。',
+    '>>'+replyTo+' ソースは？「俺が現地にいた」はソースにならんぞ。',
+    '>>'+replyTo+' いやあの時は強かった。見てないなら黙っててくれ。',
+    '>>'+replyTo+' 去年も同じこと言って馬券外してただろｗ',
+    '>>'+replyTo+' その理論なら俺の寝癖もGⅠ馬になれるわ。',
+    '>>'+replyTo+' 認めたくないだろうが'+name+'の実力は本物。',
+    '>>'+replyTo+' お前が推すと来ないから今日は黙っててくれ。',
+    '>>'+replyTo+' ここまで全部架空の思い出で草。',
+    '>>'+replyTo+' はいはい、レース終わったらまた集合な。'
+  ];
+  return replies[(no+i+replyTo)%replies.length];
+}
+// 同じ常連が一貫した癖と、たまに恥ずかしい言い訳を持つ。
+function forumHumanDrama(i,no,replyTo){
+  const m=forumPerson(no), rival=FORUM_RIVALS[no];
+  const name=forumTargetName(i);
+  const templates=[];
+  if(rival){
+    templates.push('おじさん'+rival+'号が'+name+'を切った？ なら俺は買う。あいつとだけは同じ馬券にしたくない。');
+    templates.push('>>'+(replyTo||1)+' おじさん'+rival+'号、また来たのか。先週の話、まだ終わってないからな。');
+    templates.push('おじさん'+rival+'号へ。前回の件は謝る。ただし今回の'+name+'だけは譲れん。');
+  }
+  if(m.lastResult==='miss'){
+    templates.push('前回は外した。でも予想の筋は通ってた。着順が俺に追いついてないだけ。');
+    templates.push('前回の発言は撤回する。いや、撤回はしない。言い方だけ訂正する。');
+    templates.push('負けたからって逃げないぞ。昨日は掲示板を見てなかっただけだ。');
+  }
+  if(m.lastResult==='hit'){
+    templates.push('前回'+m.lastRace+'の的中、まだ褒められてないんだが？');
+    templates.push('当てた時だけ静かになる掲示板、どうなってるんだ。');
+  }
+  if(m.lastLine){
+    templates.push('前に'+name+'を推したのは俺。言っておくが後出しではない。');
+    templates.push('昔の発言を掘るのやめろｗ 人は成長するんだよ。');
+  }
+  const everyday=[
+    '妻に「また競馬？」と言われたが、これは研究だから。'+name+'を研究する。',
+    '仕事の休憩中に見てる。上司が来たら全員静かにしてくれ。',
+    '昼飯代を馬券に回すか悩んだが、ちゃんと昼飯は食った。偉いだろ。',
+    '朝から予想を変えるのこれで4回目。今回の'+name+'が最終結論（たぶん）。',
+    'すまん、さっきの長文は馬番を一個見間違えてた。内容は忘れてくれ。',
+    '馬券は買わないって昨日宣言したけど、あれは昨日の俺の意見だ。',
+    'お前らに笑われてもいい。'+name+'が好きなんだよ。',
+    'オッズが下がるから'+name+'の良さを広めるな！ いや褒めてはほしい。',
+    '俺の予想を信じるな。でも外したら俺のせいにはするな。',
+    'このスレだけで10年くらい喧嘩してる気がする。なんだかんだ居心地いい。',
+    '風呂入って戻ったらレスバが進んでて草。何の話してたんだ。',
+    'さっきは言い過ぎた。すまん。ただし'+name+'が強いのは譲らない。',
+    '昔、'+name+'に似た馬を応援してたんだよ。理由はそれだけで十分だろ。'
+  ];
+  return forumRandom(templates.concat(everyday));
+}
+function forumTargetedReply(i,no,previous){
+  const who=previous.no, name=forumTargetName(i);
+  const m=forumPerson(no);
+  const rival=FORUM_RIVALS[no]===who;
+  const lines=[
+    '>>'+previous.id+' いや、その理屈は分かる。でも'+name+'を軽く見るなよ。',
+    '>>'+previous.id+' それ昨日と真逆のこと言ってない？',
+    '>>'+previous.id+' ちょっと言い過ぎた、ごめん。予想自体は変えないけど。',
+    '>>'+previous.id+' 正直その意見は参考になった。悔しいけど。',
+    '>>'+previous.id+' 俺も同じこと考えてた。お前とは一生分かり合えないと思ってたのに。',
+    '>>'+previous.id+' その馬券、当たったら焼肉おごってくれ。',
+    '>>'+previous.id+' それはさすがに結果論だろｗ',
+    '>>'+previous.id+' 予想は違うが、'+name+'の走りを見たいのは同じだ。'
+  ];
+  if(rival)lines.push('>>'+previous.id+' おじさん'+who+'号、お前とは今日こそ決着つける。前回の借りがある。');
+  if(previous.no===no)lines.push('>>'+previous.id+' 自分の書き込みにレスするけど、さっきの予想は訂正する。');
+  if(m.lastResult==='miss')lines.push('>>'+previous.id+' 前回外したのは認める。だからって毎回引用するなよｗ');
+  if(Math.random()<.12)return '>>'+previous.id+' '+forumOldReceipt(who);
+  return forumRandom(lines);
 }
 function forumOpinion(i,no,mode,replyTo){
   const profile=spectatorProfile(no);
@@ -1848,6 +1958,10 @@ function forumOpinion(i,no,mode,replyTo){
     '距離適性が全て。'+horseName+'はここが勝負どころ。',
     '人気より距離。'+horseName+'を買う理由はそれだけ。'
   ];
+  // 昔の（架空の）名勝負自慢、持ち上げ、レスバを混ぜる。
+  if(Math.random()<.42)pool=pool.concat([forumHumanDrama(i,no,replyTo),forumHumanDrama(i,no,replyTo)]);
+  if(Math.random()<.35)pool=pool.concat([forumFakeHistory(i,no),forumFakeHistory(i,no+3)]);
+  if(replyTo && Math.random()<.68)return forumBanter(i,no,replyTo);
   if(replyTo){
     const agree=['>>'+replyTo+' それは分かる。でも'+horseName+'も捨てられん。','>>'+replyTo+' いやいや、展開を甘く見すぎだろ。'+horseName+'が怖い。','>>'+replyTo+' その理屈なら'+horseName+'も候補に入るだろ。','>>'+replyTo+' 逆にそれがフラグなんだよなあ。','>>'+replyTo+' オッズ見てから言ってくれ。俺は'+horseName+'派。','>>'+replyTo+' それ先週も言ってなかったか？ｗ','>>'+replyTo+' 俺は反対。'+horseName+'のほうが面白い。'];
     if(Math.random()<.66)pool=agree;
@@ -1866,19 +1980,27 @@ function forumOpinion(i,no,mode,replyTo){
 }
 function makeForumPost(key,forcedHorse){
   const arr=forumThreads[key] || (forumThreads[key]=[]);
-  const previous=arr.length && Math.random()<.58 ? arr[Math.floor(Math.random()*Math.min(arr.length,8))] : null;
-  const no=1+Math.floor(Math.random()*SPECTATOR_COUNT);
+  // 常連の登場頻度を上げ、レスは実在する同スレッドの書き込みに向ける。
+  const no=Math.random()<.69?forumRegularNo():1+Math.floor(Math.random()*SPECTATOR_COUNT);
   const profile=spectatorProfile(no);
   const target=forcedHorse===null ? forumPickHorse(no) : forcedHorse;
+  const previous=arr.length && Math.random()<.77 ? arr[Math.floor(Math.random()*Math.min(arr.length,Math.min(12,arr.length)))]:null;
   const id=++forumSerial;
   const age=Math.max(1,Math.round((arr.length+1)*2.4+Math.random()*13));
-  arr.unshift({id:id,no:no,icon:FORUM_EMOJIS[no%FORUM_EMOJIS.length],profile:profile.name,body:forumOpinion(target,no,key,previous?previous.id:null),likes:Math.floor(Math.random()*17),age:age,target:target});
+  let body=forumOpinion(target,no,key,previous?previous.id:null);
+  if(previous&&Math.random()<.63)body=forumTargetedReply(target,no,previous);
+  else if(Math.random()<.28)body=forumHumanDrama(target,no,previous?previous.id:null);
+  const memory=forumPerson(no);
+  memory.pick=target;
+  memory.lastLine=body;
+  memory.boasts++;
+  arr.unshift({id:id,no:no,icon:FORUM_EMOJIS[no%FORUM_EMOJIS.length],profile:profile.name,body:body,likes:Math.floor(Math.random()*17),age:age,target:target,replyTo:previous?previous.id:null,regular:FORUM_REGULARS.includes(no)});
 }
 function resetForumThreads(){
   forumThreads={};forumSerial=0;forumVisible=10;forumRaceFinished=false;
   forumMode='race';forumHorseIndex=activeHorseIndexes()[0];
-  for(let n=0;n<32;n++)makeForumPost('race',null);
-  activeHorseIndexes().forEach(function(i){for(let n=0;n<11;n++)makeForumPost('horse-'+i,i);});
+  for(let n=0;n<55;n++)makeForumPost('race',null);
+  activeHorseIndexes().forEach(function(i){for(let n=0;n<19;n++)makeForumPost('horse-'+i,i);});
   renderForum();
 }
 function renderForum(){
@@ -1898,7 +2020,7 @@ function renderForum(){
   document.getElementById('forumThreadCount').textContent=arr.length+'件のレス';
   container.innerHTML=arr.slice(0,forumVisible).map(function(post){
     return '<article class="forum-post"><div class="forum-avatar">'+post.icon+'</div><div class="forum-content">'+
-      '<div class="forum-post-meta"><b>おじさん'+post.no+'号</b><span class="forum-role">'+forumEscape(post.profile)+'</span><span>No.'+post.id+'</span><span>架空・'+post.age+'分前</span></div>'+
+      '<div class="forum-post-meta"><b>おじさん'+post.no+'号</b>'+(FORUM_NICKNAMES[post.no]?'<span class="forum-nickname">'+forumEscape(FORUM_NICKNAMES[post.no])+'</span>':'')+'<span class="forum-role">'+forumEscape(post.profile)+'</span><span>No.'+post.id+'</span><span>架空・'+post.age+'分前</span></div>'+
       '<div class="forum-post-body">'+forumEscape(post.body).replace(/(&gt;&gt;\d+)/g,'<span class="forum-reply">$1</span>')+'</div>'+
       '<div class="forum-post-foot"><span class="likes">👍 '+post.likes+'</span><span>💬 予想・雑談</span></div></div></article>';
   }).join('') || '<div class="forum-post">まだレスがありません。</div>';
@@ -1919,6 +2041,15 @@ function addForumConversation(){
 }
 function forumAfterRace(order){
   forumRaceFinished=true;
+  // 前レースの的中・外れを常連が次走でも覚えている。
+  FORUM_REGULARS.forEach(function(no){
+    const m=forumPerson(no);
+    if(m.pick!==null&&order&&order.length){
+      m.lastResult=order[0]===m.pick?'hit':'miss';
+      m.lastRace=currentScheduledRace().name;
+      if(m.lastResult==='miss')m.losses++;else m.apologies++;
+    }
+  });
   for(let n=0;n<9;n++)makeForumPost('race',null);
   if(order&&order.length){for(let n=0;n<5;n++)makeForumPost('horse-'+order[0],order[0]);}
   renderForum();
