@@ -2208,46 +2208,115 @@ function forumAddDirectedPost(key,no,body,target,replyTo){
     replyTo:replyTo||null,regular:FORUM_REGULARS.includes(no)});
   return id;
 }
+// 実際のレース結果に対する反応。毎回同じ5人・同じ会話にならないよう分岐する。
 function forumRecentConversation(key,record,afterFinish){
-  if(!record)return;
-  const winner=record.top[0],second=record.top[1];
-  const opening=afterFinish
-    ? '確定したぞ。'+record.race+'は'+winner.number+'番 '+winner.name+'が1着、'+second.name+'が2着。'+winner.rank+'番人気だった。'
-    : '前の'+record.race+'、'+winner.name+'が'+winner.rank+'番人気で勝った件まだ話していい？';
-  const first=forumAddDirectedPost(key,22,opening,winner.index,null);
-  const secondId=forumAddDirectedPost(key,13,'>>'+first+' その話はもういいだろ。俺は'+second.name+'を推してたんだ。惜しかったんだよ。',winner.index,first);
-  const third=forumAddDirectedPost(key,7,'>>'+secondId+' 2着を惜しいで済ませるなｗ お前レース前は「楽勝」って言ってたぞ。',winner.index,secondId);
-  forumAddDirectedPost(key,77,'>>'+third+' 横からすまん。俺も'+winner.name+'を軽く見てた。そこは素直に謝る。',winner.index,third);
-  if(winner.rank>=6){
-    forumAddDirectedPost(key,55,'>>'+first+' '+winner.rank+'番人気だったろ？ こういうのを買いたくて競馬やってるんだよ。',winner.index,first);
-  }else{
-    forumAddDirectedPost(key,44,'>>'+first+' 人気どおりでも的中したとは限らない。'+second.name+'を相手に選べたかが問題。',winner.index,first);
+  if(!record || !record.top || record.top.length<3)return;
+  const [a,b,c]=record.top;
+  const openings=afterFinish?[
+    record.race+'、'+a.name+'が勝ったか。'+a.rank+'番人気とはね。',
+    '確定出た。'+a.name+'→'+b.name+'→'+c.name+'。これ買えた人いる？',
+    '終わってみれば'+a.name+'が1着。俺は'+b.name+'の方を見てたわ。',
+    'お疲れ。'+record.race+'は'+a.name+'の勝ち。まずは無事に終わってよかった。'
+  ]:[
+    'この前の'+record.race+'、'+b.name+'が2着だったのまだ惜しいと思ってる。',
+    record.race+'の勝ち馬'+a.name+'、'+a.rank+'番人気だったの今見返して驚いた。',
+    '前の'+record.race+'、'+c.name+'まで拾えた人いた？',
+    'この前の'+record.race+'の結果を見直したら、'+a.name+'が単勝'+a.odds+'倍だった。'
+  ];
+  const answers=[
+    ['あれは買い方が難しかった。','いや、'+b.name+'の評価が足りなかったんだよ。','後からなら何とでも言えるｗ'],
+    ['数字見たら納得するけど、発走前に買えるかは別。','俺は'+a.name+'より'+b.name+'が怖かった。','人気だけで決めるのは危ないな。'],
+    ['3着まで揃えるのが一番きつい。','そこだけ抜けた。馬券あるあるだな。','複勝で見てた人が一番落ち着いてそう。'],
+    ['当時のオッズで買う勇気がなかった。','今見たら簡単そうに見えるのが悔しい。','次も同じこと言ってそうで怖い。']
+  ];
+  const choice=Math.floor(Math.random()*openings.length);
+  const n1=forumRegularNo(),n2=forumRegularNo();
+  const first=forumAddDirectedPost(key,n1,openings[choice],a.index,null);
+  if(Math.random()<.8){
+    const second=forumAddDirectedPost(key,n2,'>>'+first+' '+forumRandom(answers[choice]),b.index,first);
+    if(Math.random()<.48){
+      const follow=forumRandom(['俺もその見方に近い。','そうか？ 俺はまだ納得してない。','分かる。次のレースで答え合わせしよう。','そろそろ別の話しようぜｗ']);
+      forumAddDirectedPost(key,forumRegularNo(),'>>'+second+' '+follow,c.index,second);
+    }
   }
 }
 function forumNormalizeLine(s){return s.replace(/^>>\d+\s*/,'').replace(/\s+/g,' ').trim();}
+// 雑談を中心に話題を持ち回りにする。話題ごとの返答を用意し、無関係な相づちを防ぐ。
+const FORUM_CHAT_TOPICS={
+  food:{lines:['今日の昼はカツ丼にした。験担ぎのつもりが普通にうまかった。','競馬場の焼きそばって何であんなにうまいんだろうな。','コンビニのおにぎり、海苔が全部手に付いた。新聞読めん。','カレーに福神漬けは必要か？ これだけは譲れない。','弁当作ってきたのに家の冷蔵庫に置いてきた。','昨日の鍋がまだ残ってる。今夜も鍋だ。','蕎麦屋で天ぷら付けるか15分悩んでしまった。'],replies:['カツ丼の話やめろ、腹減った。','その店どこだよ。今度行きたい。','昼飯の話題だけ急に平和になるな。','それはさすがに家で食べてこいｗ','わかる。ああいうの妙にうまいよな。','今その話をするのは反則だろ。']},
+  family:{lines:['孫にスマホの使い方を教わった。立場が逆転したな。','うちの猫、新聞の上で寝るから出馬表が読めない。','息子が就職した。嬉しいがちょっと寂しい。','嫁に買い物頼まれてたのを今思い出した。','犬の散歩から帰還。あいつの方が体力ある。','父親から昔の競馬場の話を聞いた。半分くらい盛ってる気がする。','家族がテレビを使うのでスマホで観戦する。'],replies:['それはおめでとう。','猫はそういう仕事してるからな。','先に買い物行ってこいｗ','なんだかんだいい家族じゃないか。','うちも似たようなもんだよ。','それは競馬より大事な話だ。']},
+  work:{lines:['明日から早番だ。夜更かししてる場合じゃない。','休憩室の時計が5分進んでる。誰がやったんだ。','今日は残業確定。レースだけは見届けたい。','会議で寝そうになった。コーヒーが足りない。','休日出勤の代休がようやく取れた。何しようかな。','仕事帰りのスーパーが一番混むの何とかならんか。','パソコンの更新が終わらなくて帰れん。'],replies:['ちゃんと寝ろよ。','それは大変だな、お疲れ。','会社で見てるのバレるぞｗ','代休はゆっくり休め。','コーヒーじゃどうにもならん日あるよな。','その話、うちの職場でもあったわ。']},
+  weather:{lines:['急に冷えてきたな。朝布団から出るのがつらい。','洗濯物を干した途端に曇るのやめてくれ。','今日は風が強い。帽子が飛びかけた。','傘を持って出た日に限って晴れるんだよな。','窓開けたら金木犀の匂いがした。秋だな。','気温差で何着ていいか分からん。','昨日の夕焼け、やけに綺麗だったな。'],replies:['こっちも寒い。上着出したわ。','洗濯物あるあるだな。','帽子は気をつけろｗ','秋はいいよな。','こっちはまだ暑いぞ。','天気予報が難しい季節だな。']},
+  hobby:{lines:['昔のゲーム機引っ張り出したら普通に動いた。ちょっと感動。','ラジオ聴きながら予想する時間が一番好きだ。','久々に釣り行きたい。もう何年も行ってない。','プラモデルの細かい部品を床に落とした。見つからん。','散歩中に古本屋を見つけた。こういうの嬉しい。','盆栽を始めたが水のやりすぎで怒られた。','野球の中継と競馬、どっちを見るか毎回迷う。'],replies:['それ懐かしいな。','部品は絶対変な所から出てくるぞ。','釣りいいねえ。','そういう休日が一番贅沢だ。','昔のゲームって妙に難しいよな。','趣味があるのはいいことだ。']},
+  forum:{lines:['この掲示板、いつ来ても誰かいるな。','さっきの人、ちゃんと帰宅できたんだろうか。','レスが伸びてると思ったら飯の話で笑った。','みんな口は悪いが、何だかんだ優しいよな。','いつもの常連がいないと少し心配になる。','初めて書き込む。よろしく頼む。','昔ここで喧嘩した人、今は一番話す相手だ。'],replies:['おう、よろしく。','誰のことだよｗ','ここ居心地いいんだよな。','そういうこと言うと照れるだろ。','今日は静かな方だぞ。','あの人ならさっきいたよ。']},
+  money:{lines:['財布に小銭しかないと思ったら別のポケットに千円あった。','自販機の値段また上がってないか？','今月は節約すると決めた。まず家計簿を買った。','ポイントカード出し忘れた時の悔しさ、地味に大きい。','スーパーの半額シールを待つか迷う時間が長い。','古い上着から五百円玉が出てきた。臨時収入だ。','電気代の請求を見て無言になった。'],replies:['それはちょっと嬉しいな。','分かる、最近何でも高い。','家計簿買って満足するなよｗ','その千円は大事にしろ。','半額の見極め難しいよな。','電気代は本当に勘弁してほしい。']},
+  nostalgia:{lines:['昔は結果を新聞で確認してたんだよな。','初めて競馬場に行った日の音、まだ覚えてる。','親父のラジオから競馬中継が流れてたのを思い出した。','学生の頃は百円が大金だった。今も大金だけど。','昔の馬券、引き出しから出てきた。何で取ってあるんだ俺。','初めて買った馬券の馬名だけは忘れない。','競馬場の売店の匂いって妙に記憶に残る。'],replies:['あったあった、懐かしい。','昔話始まったぞｗ でも聞きたい。','その気持ちは分かる。','今も百円を大事にしようぜ。','それ捨てられないよな。','ラジオ中継は味がある。']},
+  betting:{lines:['三連複の点数が増えすぎた。誰か俺の手を止めて。','ワイドで堅く行くつもりが、なぜか三連単を眺めてる。','軸を決めるまでが長い。決めた後も迷う。','締切直前に買い目を変えて当たった試しがない。','買わずに観戦する日があってもいいと思う。','穴を一頭だけ入れたいのに候補が五頭いる。','複勝一点でいいのでは、と三十分考えてる。'],replies:['点数を数え直してみろｗ','締切前に触るな、それが正解。','ワイドも難しいんだよな。','観戦だけの日も悪くないぞ。','軸選びで一日終わるやつだ。','それは分かる。俺も決められん。']},
+  track:{lines:['今日は馬場の傾向が読みにくいな。','先行馬が多いとスタートから目が離せない。','直線に入った瞬間の歓声が好きだ。','パドック見てると時間を忘れる。','距離が変わると同じ馬でも別物に見える。','今日は人気より展開を重視したい。','前残りか差し決着か、それだけで迷ってる。'],replies:['その見方は分かる。','今日は特に展開が難しいな。','そこは俺も気になってた。','パドックで全部分かれば苦労しないｗ','馬場ひとつで変わるからな。','先行勢の出方次第だろうね。']},
+  technology:{lines:['スマホの文字が小さすぎて馬番を読み違えた。','家のWi-Fi、肝心な時に遅くなる。','通知が多すぎて大事なものを見逃す。','予想をメモ帳に書いたら保存せず閉じた。','スマホの充電が12％。最後まで持つかな。','音声入力したら馬名が全部別の単語になった。','ブラウザのタブが四十枚ある。どれも閉じられん。'],replies:['充電しろｗ','それは困るな。','文字サイズ上げた方がいいぞ。','タブ四十枚はさすがに整理しよう。','音声入力はたまに面白いことになる。','俺も同じことやったわ。']},
+  health:{lines:['肩がこるので少し歩いてきた。','最近早起きになった。年齢のせいかね。','寝る前のスマホをやめたい。毎晩失敗する。','階段を使ったら息が切れた。運動不足だ。','今日は早めに風呂入って寝るつもり。','眼鏡の置き場所を忘れて眼鏡を探した。頭にあった。','朝の散歩を始めた。三日坊主は突破したぞ。'],replies:['無理しないでな。','散歩いいね、続けよう。','俺も寝る前に見ちゃう。','眼鏡あるあるｗ','今日は早く寝ろよ。','三日続いたなら上出来だ。']}
+};
+const FORUM_CHAT_KEYS=Object.keys(FORUM_CHAT_TOPICS);
+let forumTopicCursor=0;
+function forumFreshTopic(arr,horseMode){
+  const recent=arr.slice(0,9).map(function(p){return p.topic;});
+  const options=FORUM_CHAT_KEYS.filter(function(t){return recent.filter(function(x){return x===t;}).length<2;});
+  const available=options.length?options:FORUM_CHAT_KEYS;
+  // 馬ごとのスレでも雑談はあるが、予想系の割合を少し高める。
+  if(horseMode && Math.random()<.42)return forumRandom(['betting','track']);
+  forumTopicCursor=(forumTopicCursor+1)%FORUM_CHAT_KEYS.length;
+  return available[(forumTopicCursor+Math.floor(Math.random()*available.length))%available.length];
+}
+function forumNaturalPost(topic,previous,no,target){
+  const group=FORUM_CHAT_TOPICS[topic];
+  if(previous && previous.topic===topic){
+    const opener=forumRandom(group.replies);
+    const extra=Math.random()<.16?' '+forumRandom(['で、その後どうなった？','俺はちょっと違うかな。','続き聞かせて。','まあ今日はのんびり行こう。']):'';
+    return '>>'+previous.id+' '+opener+extra;
+  }
+  const line=forumRandom(group.lines);
+  if(topic==='track' && Math.random()<.35)return line+' '+forumRandom(['このレースは'+raceDistance+'mだし。','今日は'+trackCondition+'馬場なのも気になる。',''+forumTargetName(target)+'はどうだろう。']);
+  if(topic==='betting' && Math.random()<.2)return line+' '+forumTargetName(target)+'も気になるんだよ。';
+  return line;
+}
+function forumNormalizeIdea(s){
+  return String(s).replace(/^>>\d+\s*/,'').replace(/[！!？?。、\sｗw]/g,'').replace(/おじさん\d+号/g,'おじさん').slice(0,35);
+}
 function makeForumPost(key,forcedHorse){
   const arr=forumThreads[key] || (forumThreads[key]=[]);
-  // 常連の登場頻度を上げ、レスは実在する同スレッドの書き込みに向ける。
-  const no=Math.random()<.69?forumRegularNo():1+Math.floor(Math.random()*SPECTATOR_COUNT);
+  const no=Math.random()<.65?forumRegularNo():1+Math.floor(Math.random()*SPECTATOR_COUNT);
   const profile=spectatorProfile(no);
-  const target=forcedHorse===null ? forumPickHorse(no) : forcedHorse;
-  const previous=arr.length && Math.random()<.77 ? arr[Math.floor(Math.random()*Math.min(arr.length,Math.min(12,arr.length)))]:null;
+  const target=forcedHorse===null?forumPickHorse(no):forcedHorse;
+  const previous=arr.length && Math.random()<.44?forumRandom(arr.slice(0,Math.min(arr.length,8))):null;
+  const used=new Set(arr.map(function(p){return forumNormalizeIdea(p.body); }));
+  let body='',topic='',selectedReply=null;
+  for(let attempt=0;attempt<55;attempt++){
+    const reply=previous && attempt<12 && Math.random()<.7;
+    if(reply && previous.topic && FORUM_CHAT_TOPICS[previous.topic]){
+      topic=previous.topic; selectedReply=previous;
+      body=forumNaturalPost(topic,previous,no,target);
+    }else if(!reply && forumRecentResults.length && Math.random()<.13){
+      topic='recent';selectedReply=null;body=forumRecentTalk(no,target);
+    }else if(!reply && Math.random()<.16){
+      topic='horse';selectedReply=null;body=forumVariedLine(target,no,null);
+    }else{
+      topic=forumFreshTopic(arr,forcedHorse!==null);
+      selectedReply=null;
+      body=forumNaturalPost(topic,null,no,target);
+    }
+    if(body && !used.has(forumNormalizeIdea(body)))break;
+  }
+  if(!body || used.has(forumNormalizeIdea(body))){
+    topic='free';selectedReply=null;
+    body=forumRandom(['ちょっと席を外してた。何の話？','今日は書き込みが多いな。','お疲れ。とりあえずお茶でも飲もう。','話がいろんな方向に飛んでて笑う。'])+' '+forumRandom(['帰ってきたぞ。','今読んでる。','しばらく見学する。']);
+  }
   const id=++forumSerial;
   const age=Math.max(1,Math.round((arr.length+1)*2.4+Math.random()*13));
-  // 返信は元レスの内容に合わせて書く。アンカーのない投稿には返信先を付けない。
-  let body;
-  if(previous && Math.random()<.77)body=forumReplyToRecent(no,previous)||forumContextReply(target,no,previous);
-  else if(forumRecentResults.length && Math.random()<.39)body=forumRecentTalk(no,target);
-  else body=Math.random()<.86?forumVariedLine(target,no,null):forumOpinion(target,no,key,null);
-  const used=new Set(arr.map(function(p){return forumNormalizeLine(p.body);}));
-  for(let attempt=0;attempt<35 && used.has(forumNormalizeLine(body));attempt++){
-    body=previous&&Math.random()<.75?forumContextReply(target,no,previous):forumVariedLine(target,no,null);
-  }
   const memory=forumPerson(no);
-  memory.pick=target;
-  memory.lastLine=body;
-  memory.boasts++;
-  arr.unshift({id:id,no:no,icon:FORUM_EMOJIS[no%FORUM_EMOJIS.length],profile:profile.name,body:body,likes:Math.floor(Math.random()*17),age:age,target:target,replyTo:(body.match(/^>>(\d+)/)||[])[1] ? Number(body.match(/^>>(\d+)/)[1]) : null,regular:FORUM_REGULARS.includes(no)});
+  memory.pick=target;memory.lastLine=body;memory.boasts++;
+  arr.unshift({id:id,no:no,icon:FORUM_EMOJIS[no%FORUM_EMOJIS.length],profile:profile.name,body:body,
+    likes:Math.floor(Math.random()*17),age:age,target:target,topic:topic,
+    replyTo:selectedReply?selectedReply.id:null,regular:FORUM_REGULARS.includes(no)});
 }
 function resetForumThreads(){
   forumThreads={};forumSerial=0;forumVisible=10;forumRaceFinished=false;
@@ -4555,7 +4624,7 @@ document.getElementById('stake').addEventListener('input',function(){
 
 loadHorseSettings();
 renderHorseEditor();
-const KAKUGARI_UPDATE_VERSION='2026-10-13-forum-natural-talk-mano10-fix';
+const KAKUGARI_UPDATE_VERSION='2026-10-14-forum-conversation-variety';
 function showUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.add('is-open');}
 function closeUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.remove('is-open');try{localStorage.setItem('kakugari-last-seen-update',KAKUGARI_UPDATE_VERSION);}catch(e){}}
 prepareRace();
@@ -4596,8 +4665,10 @@ try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSI
 <div class="update-history-overlay" id="updateHistoryOverlay" role="dialog" aria-modal="true" aria-labelledby="updateHistoryHeading" onclick="if(event.target===this)closeUpdateHistory()">
   <div class="update-history-dialog">
     <h2 id="updateHistoryHeading">📋 角刈ダービー 更新履歴</h2>
-    <p style="color:#64748b">最新版：2026年10月13日（直近レースの記憶・会話型掲示板）</p>
-    <h3>🆕 2026/10/13 掲示板の自然な会話・表示修正</h3>
+    <p style="color:#64748b">最新版：2026年10月14日（掲示板の話題拡充・重複対策）</p>
+    <h3>🆕 2026/10/14 掲示板の雑談・会話を大幅拡充</h3>
+    <ul><li>食事・家族・仕事・天気・趣味・節約・懐古・体調・スマホなど12種類の雑談を追加。競馬の話ばかりにならないよう調整。</li><li>直近の投稿と似た文章を避け、同じ話題の連投も抑制。返信は元の話題に沿った会話へ変更。</li><li>レース結果の会話も固定の5人・固定の台詞を廃止し、内容と人数に変化を付けました。</li></ul>
+    <h3>2026/10/13 掲示板の自然な会話・表示修正</h3>
     <ul><li>掲示板の各投稿に付いていた「架空」の表示を削除。架空の投稿である旨は掲示板下部の注意書きに集約しました。</li><li>アンカー返信での長い引用・かぎ括弧の連発を減らし、短い相づち・反論・謝罪を増やしました。</li><li>マノファイナンスの画面上の利息表示を、実際の計算どおり10%（複利）に修正しました。</li></ul>
     <h3>2026/10/13 追加更新</h3>
     <ul><li>掲示板がゲーム内の直近レースの勝ち馬・着順・人気・オッズ・馬場を記憶し、次のレースでも話題にします。</li><li>常連同士のアンカー会話を連続生成。予想の的中自慢・外れた言い訳・謝罪・反論を追加。</li><li>実際のゲーム内結果と、掲示板だけの架空の昔話を区別しました。</li></ul>
