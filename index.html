@@ -598,6 +598,7 @@ h1{color:#134c38;letter-spacing:.045em}
     <div id="trackBox" class="infobox">馬場：--</div>
     <div id="distanceBox" class="infobox distanceBox">距離：--</div>
     <div id="conditionNote" class="infobox">展開影響：--</div>
+    <div id="courseFeatureBox" class="infobox" style="line-height:1.6;max-width:100%">🏟️ コース特徴：--</div>
   </div>
 
   <div class="horse-editor-box">
@@ -785,6 +786,59 @@ let seasonRaceIndex=0;
 let raceSurface='芝';
 let raceVenue='中山';
 let raceGrade='GⅢ';
+// 実在する中央競馬場の地形的特徴を、ゲーム用に簡略化したコースモデル。
+// 芝の含水率・開催時期による芝丈・内外の傷みは現実では変動するため、ここでは固定の傾向値として扱う。
+const COURSE_PROFILES={
+  '東京':{straight:525.9,hill:2.0,hillType:'直線に緩やかな上り坂',turf:'広いコース・比較的軽い芝',firmness:0.85,turn:0.35,desc:'長い直線で末脚が生きやすい'},
+  '中山':{straight:310,hill:2.2,hillType:'ゴール前の急坂',turf:'小回り・起伏が大きい芝',firmness:1.18,turn:1.25,desc:'器用さと坂をこなすパワーが重要'},
+  '阪神':{straight:473.6,hill:1.8,hillType:'ゴール前の急坂',turf:'直線の急坂とコーナーの起伏',firmness:1.02,turn:0.7,desc:'直線の持続力と坂への対応が鍵'},
+  '京都':{straight:403.7,hill:0,hillType:'3～4コーナーの上り下り・直線はほぼ平坦',turf:'比較的平坦な直線・下り坂で加速',firmness:0.82,turn:0.7,desc:'下り坂からの加速とスピードの持続が重要'},
+  '中京':{straight:412.5,hill:2.0,hillType:'直線の急坂',turf:'長い直線と坂で力を要する芝',firmness:1.12,turn:0.75,desc:'直線の坂を乗り越えるパワーが重要'},
+  '新潟':{straight:658.7,hill:0,hillType:'直線はほぼ平坦',turf:'広いコース・高速決着寄り',firmness:0.78,turn:0.3,desc:'長い直線で瞬発力を生かしやすい'},
+  '福島':{straight:292,hill:0.8,hillType:'小さな起伏',turf:'小回り・短い直線',firmness:1.08,turn:1.3,desc:'先行力とコーナーでの器用さが重要'},
+  '小倉':{straight:293,hill:0,hillType:'直線はほぼ平坦',turf:'小回り・スピード型',firmness:0.9,turn:1.25,desc:'先行力と小回り適性が重要'},
+  '札幌':{straight:266.1,hill:0,hillType:'大きな高低差は少ない',turf:'洋芝主体・力を要しやすい',firmness:1.35,turn:1.15,desc:'洋芝をこなすパワーと持続力が重要'},
+  '函館':{straight:262.1,hill:0,hillType:'起伏のあるコース',turf:'洋芝主体・短い直線',firmness:1.4,turn:1.2,desc:'洋芝適性と先行力が重要'}
+};
+function courseProfile(){return COURSE_PROFILES[raceVenue]||COURSE_PROFILES['東京'];}
+function courseStraight(){
+  const c=courseProfile();
+  // 同じ競馬場でも内回り・外回り・ダートで直線長は異なる。
+  if(raceVenue==='阪神' && raceSurface==='芝' && [2000,2200].includes(raceDistance))return 356.5;
+  if(raceVenue==='京都' && raceSurface==='芝' && [2000].includes(raceDistance))return 328.4;
+  if(raceVenue==='中京' && raceSurface==='ダ')return 410.7;
+  if(raceVenue==='東京' && raceSurface==='ダ')return 501.6;
+  return c.straight;
+}
+function courseTurnDemand(){return courseProfile().turn*(raceDistance<=1400?1.1:1);}
+function horseCourseTraits(i){
+  const h=horseConfig[i];
+  // 馬ごとの固定された個性。既存セーブデータにも適用可能で、毎レース抽選しない。
+  const power=Math.max(-1,Math.min(1,((h.mud||0.7)-0.72)*2.4 + (h.base-79)*0.016));
+  const agility=Math.sin((i+1)*2.43)*0.75+(h.style==='逃げ'||h.style==='先行'?0.22:0);
+  const kick=Math.cos((i+1)*1.97)*0.55+(h.style==='差し'||h.style==='追込'?0.32:0);
+  return {power,agility,kick};
+}
+function courseHorseBonus(i){
+  const c=courseProfile(),t=horseCourseTraits(i),style=raceStyle[i]||horseConfig[i].style;
+  let b=0;
+  // 坂のある競馬場はパワー型が有利。小回りは器用さと先行力が重要。
+  b+=c.hill*1.65*t.power;
+  b+=courseTurnDemand()*1.8*t.agility;
+  b+=(courseStraight()-350)/175*2.0*t.kick;
+  if(c.firmness>1)b+=(c.firmness-1)*4.2*t.power;
+  if(c.firmness<1)b+=(1-c.firmness)*1.4*t.kick;
+  if(courseStraight()<330 && (style==='逃げ'||style==='先行'))b+=1.15;
+  if(courseStraight()>450 && (style==='差し'||style==='追込'))b+=1.1;
+  if(raceVenue==='京都' && (style==='差し'||style==='好位'))b+=0.65;
+  if(trackCondition==='重'||trackCondition==='不良')b+=t.power*c.firmness*0.9;
+  return b;
+}
+function courseSummary(){
+  const c=courseProfile();
+  return '直線約'+Math.round(courseStraight())+'m／'+c.hillType+'／'+c.turf+'。'+c.desc+'。';
+}
+
 
 const names = [
   'ピーチトリップ','ジェラゲーム','ウスクラツヨシ','ヤオイドリーム','カブトアワセ','ヒザマズキナサイ',
@@ -1184,6 +1238,8 @@ function renderRaceCondition(){
   else dnote='スタミナ最重要';
 
   nb.textContent='展開影響：'+note+' / '+dnote;
+  const courseBox=document.getElementById('courseFeatureBox');
+  if(courseBox)courseBox.textContent='🏟️ コース特徴：'+courseSummary();
 }
 
 function conditionHorseBonus(i){
@@ -3896,7 +3952,7 @@ function startRace(){
 
   const style=raceStyle.slice();
   const ability=raceRating.map(function(v,i){
-    return v + conditionHorseBonus(i) + distanceTrait(i) + distancePaceModifier(raceStyle[i]) + rndNormal()*(5.5 + conditionProfile.random*0.6);
+    return v + conditionHorseBonus(i) + distanceTrait(i) + distancePaceModifier(raceStyle[i]) + courseHorseBonus(i) + rndNormal()*(5.5 + conditionProfile.random*0.6);
   });
   const paceRoll=Math.random();
   const pace=paceRoll<0.32?'スローペース':(paceRoll<0.72?'ミドルペース':'ハイペース');
@@ -4014,6 +4070,7 @@ function startRace(){
   log('1番人気は '+horse(favorite)+'、単勝 '+winOdds[favorite].toFixed(1)+'倍。');
   log('2番人気は '+horse(rank.indexOf(2))+'、3番人気は '+horse(rank.indexOf(3))+'。');
   log('距離適性と馬場適性、展開読みも勝負のポイントになりそうです。');
+  log('【コース解説】'+courseSummary());
   const excellentHorse=raceConditionState.indexOf('絶好調');
   if(excellentHorse>=0){
     log('★★ '+horse(excellentHorse)+'は今日は絶好調！大きな上積みが期待できそうです。');
@@ -4213,6 +4270,7 @@ function startRace(){
       syncRaceScene(projectedFinish,tick,raceTicks,projectedFinish.slice(0,5));
 
       log('4コーナーを回ります！ここから最後の直線！');
+      log('直線は約'+Math.round(courseStraight())+'m。'+courseProfile().hillType+'が待ち構えます！');
       log('先頭争いは '+horse(projectedFinish[0])+'、'+horse(projectedFinish[1])+'！');
       log(horse(projectedFinish[2])+'も射程圏、さらに '+horse(projectedFinish[3])+'が外から接近！');
 
@@ -4394,6 +4452,7 @@ function buildRaceTimeAndMargins(order){
   }[trackCondition] || 0;
 
   winnerSeconds+=trackPenalty*(raceDistance/1000);
+  winnerSeconds+=(courseProfile().firmness-1)*2.4*(raceDistance/2000);
   winnerSeconds+=(Math.random()*2.4-1.2);
 
   const marginChoices=[
@@ -4837,7 +4896,8 @@ try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSI
   <div class="update-history-dialog">
     <h2 id="updateHistoryHeading">📋 角刈ダービー 更新履歴</h2>
     <p style="color:#64748b">最新版：2026年10月14日（雑談を競馬中心に再調整）</p>
-    <h3>🆕 2026/10/14 雑談を競馬に関連付ける調整</h3>\n    <ul><li>食事・家族・仕事・天気などの雑談をすべて競馬に関係する内容に変更。話題の幅は残しつつ競馬掲示板らしさを優先。</li><li>雑談への返信も馬券・予想・競馬場などの話に沿うよう見直しました。</li></ul>\n    <h3>2026/10/14 掲示板の雑談・会話を大幅拡充</h3>
+    <h3>🆕 2026/10/15 コース特性シミュレーション</h3><ul><li>競馬場ごとの坂・直線長・小回り・芝の重さを実装。馬のパワー・器用さ・末脚との相性を着順計算に反映。</li><li>コース特徴を出走前に表示し、実況でも坂や直線の長さを紹介。勝ち時計にも芝の重さを簡易反映。</li><li>実際の競馬場の特徴を参考にしたゲーム向けの簡略モデルであり、厳密なJRAコースデータの再現ではありません。</li></ul>
+    <h3>2026/10/14 雑談を競馬に関連付ける調整</h3>\n    <ul><li>食事・家族・仕事・天気などの雑談をすべて競馬に関係する内容に変更。話題の幅は残しつつ競馬掲示板らしさを優先。</li><li>雑談への返信も馬券・予想・競馬場などの話に沿うよう見直しました。</li></ul>\n    <h3>2026/10/14 掲示板の雑談・会話を大幅拡充</h3>
     <ul><li>食事・家族・仕事・天気・趣味・節約・懐古・体調・スマホなど12種類の雑談を追加。競馬の話ばかりにならないよう調整。</li><li>直近の投稿と似た文章を避け、同じ話題の連投も抑制。返信は元の話題に沿った会話へ変更。</li><li>レース結果の会話も固定の5人・固定の台詞を廃止し、内容と人数に変化を付けました。</li></ul>
     <h3>2026/10/13 掲示板の自然な会話・表示修正</h3>
     <ul><li>掲示板の各投稿に付いていた「架空」の表示を削除。架空の投稿である旨は掲示板下部の注意書きに集約しました。</li><li>アンカー返信での長い引用・かぎ括弧の連発を減らし、短い相づち・反論・謝罪を増やしました。</li><li>マノファイナンスの画面上の利息表示を、実際の計算どおり10%（複利）に修正しました。</li></ul>
