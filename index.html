@@ -555,6 +555,15 @@ h1{color:#134c38;letter-spacing:.045em}
 .forum-collapsible[open] .forum-collapse-hint::after{content:'クリックして閉じる';font-size:.78rem}
 .forum-collapsible .forum-panel{margin-top:0;border:0;border-top:1px solid #cddfd3;border-radius:0}
 
+
+.arc-betting{background:#f0f7ef;border:1px solid #bfd8c0;border-radius:12px;padding:13px;margin:14px 0}
+.arc-betting h3{margin:0 0 9px;color:#23513d}.arc-money{margin-bottom:9px}
+.arc-bet-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.arc-bet-grid label{font-size:.83rem;font-weight:700}.arc-bet-grid select,.arc-bet-grid input{display:block;width:100%;box-sizing:border-box;padding:9px;border:1px solid #b9c9b9;border-radius:7px;background:#fff;color:#24352d;margin-top:4px}
+.arc-bet-quote{margin:11px 0;font-weight:700}.arc-buy-btn{padding:11px 15px;border:0;border-radius:8px;background:#b17a17;color:#fff;font-weight:800;cursor:pointer}
+.arc-buy-btn:disabled{opacity:.5;cursor:not-allowed}.arc-tickets{margin-top:11px;font-size:.86rem;line-height:1.8}
+@media(max-width:530px){.arc-bet-grid{grid-template-columns:1fr}}
+
 /* 更新履歴 */
 .update-history-button{display:inline-flex;align-items:center;gap:6px;margin:0 0 12px;padding:9px 14px;border-radius:9px;border:1px solid #9db5d6;background:#f0f6ff;color:#184b84;font-weight:800;cursor:pointer}
 .update-history-overlay{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:99999;display:none;align-items:center;justify-content:center;padding:18px}
@@ -563,6 +572,15 @@ h1{color:#134c38;letter-spacing:.045em}
 .update-history-dialog h2{margin:0 0 10px;color:#174b39}.update-history-dialog h3{margin:18px 0 6px;font-size:1rem;color:#1c5a7d}.update-history-dialog li{margin:7px 0;line-height:1.55}.update-history-close{padding:10px 20px;border:0;border-radius:8px;background:#1d754f;color:white;font-weight:800;cursor:pointer}
 .forum-reply-link{color:#2463ad;font-weight:800;text-decoration:underline;cursor:pointer;background:transparent;border:0;padding:0;font:inherit}
 .forum-post:target,.forum-post.forum-highlight{outline:3px solid #f4b641;outline-offset:-3px;background:#fff7dc;transition:background 1s}
+
+/* 凱旋門賞・海外遠征観戦 */
+.arc-overlay{position:fixed;inset:0;z-index:99998;background:#101c25d9;display:none;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.arc-card{width:min(740px,100%);max-height:92vh;overflow-y:auto;background:linear-gradient(145deg,#f9f4e7,#fff);border:4px solid #c9a34d;border-radius:18px;padding:22px;box-shadow:0 18px 65px #0008;color:#263b35}
+.arc-card h2{margin:0 0 7px;color:#23513d}.arc-sub{font-size:.9rem;color:#657267;margin-bottom:12px}
+.arc-entries{width:100%;border-collapse:collapse;font-size:.9rem}.arc-entries th,.arc-entries td{padding:6px;border-bottom:1px solid #e2decf;text-align:left}.arc-entries th{background:#e9e4d3}
+.arc-japan{background:#e6f4eb;font-weight:800}.arc-commentary{background:#152f25;color:#f4e8bc;border-radius:10px;padding:12px;margin:12px 0;line-height:1.8;max-height:240px;overflow:auto;white-space:pre-wrap}
+.arc-buttons{display:flex;gap:8px;flex-wrap:wrap}.arc-buttons button{flex:1;min-width:150px;padding:12px;border:0;border-radius:9px;background:#206b49;color:white;font-weight:800;cursor:pointer}.arc-buttons button:disabled{opacity:.5;cursor:default}
+.arc-note{font-size:.8rem;color:#6d746e;margin-top:10px}
 </style>
 </head>
 <body>
@@ -972,6 +990,9 @@ let seasonPayoutTotal=0;
 let seasonHitTickets=0;
 let seasonPurchaseCount=0;
 let seasonWins=Array(18).fill(0);
+let seasonArcPoints=Array(18).fill(0);
+let arcEventDone=false;
+let arcRaceState=null;
 let seasonBestPayout=0;
 let bets=[];
 let purchaseSerial=0;
@@ -4659,7 +4680,11 @@ function finish(order){
   seasonPayoutTotal+=payout;
   if(payout>0)seasonHitTickets++;
   seasonBestPayout=Math.max(seasonBestPayout,payout);
-  if(order && order.length)seasonWins[order[0]]++;
+  if(order && order.length){
+    seasonWins[order[0]]++;
+    // 1～5着を対象に海外遠征選抜ポイントを蓄積（GⅠ勝利を重視）。
+    [10,6,4,2,1].forEach(function(pt,pos){if(order[pos]!==undefined)seasonArcPoints[order[pos]]+=pt;});
+  }
 
   // 借金がある場合はレース終了時に10%利息を加算し、自動返済条件だけ判定する。
   // マノファイナンスの新規融資判定は「次のレース」を押した時まで行わない。
@@ -4754,6 +4779,10 @@ function restartSeason(){
   seasonHitTickets=0;
   seasonPurchaseCount=0;
   seasonWins=Array(18).fill(0);
+  seasonArcPoints=Array(18).fill(0);
+  arcEventDone=false;
+  arcRaceState=null;
+  document.getElementById('arcOverlay').style.display='none';
   seasonBestPayout=0;
 
   document.getElementById('seasonResultOverlay').style.display='none';
@@ -4770,11 +4799,214 @@ function restartSeason(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+
+const ARC_FOREIGN_HORSES=[
+  {name:'ヴァルドロワイヤル',country:'🇫🇷 フランス',base:103,style:'差し'},
+  {name:'エクリプスドール',country:'🇬🇧 イギリス',base:101,style:'好位'},
+  {name:'サンティエール',country:'🇫🇷 フランス',base:100,style:'先行'},
+  {name:'アルティモレガーレ',country:'🇮🇪 アイルランド',base:102,style:'差し'},
+  {name:'シュヴァルデュノール',country:'🇫🇷 フランス',base:98,style:'追込'},
+  {name:'キングスエンブレム',country:'🇬🇧 イギリス',base:100,style:'先行'},
+  {name:'グランデステラ',country:'🇮🇹 イタリア',base:96,style:'逃げ'},
+  {name:'ノーブルエクリプス',country:'🇩🇪 ドイツ',base:99,style:'好位'},
+  {name:'オーシャンレガシー',country:'🇮🇪 アイルランド',base:97,style:'差し'},
+  {name:'ベルエポックノワール',country:'🇫🇷 フランス',base:101,style:'好位'},
+  {name:'ロイヤルアヴェニール',country:'🇬🇧 イギリス',base:98,style:'追込'},
+  {name:'モンテヴェルディ',country:'🇮🇹 イタリア',base:97,style:'先行'},
+  {name:'アストラルブレイズ',country:'🇮🇪 アイルランド',base:99,style:'差し'},
+  {name:'ルミエールドリオン',country:'🇫🇷 フランス',base:100,style:'先行'},
+  {name:'ノーザンカヴァリエ',country:'🇩🇪 ドイツ',base:96,style:'好位'},
+  {name:'エンペラーヴェール',country:'🇬🇧 イギリス',base:101,style:'差し'}
+];
+function arcEsc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function arcRepresentatives(){
+  return names.map(function(n,i){return i;}).sort(function(a,b){
+    // 芝2400m適性も加味し、国内成績を第一に選抜。
+    const score=function(i){
+      const h=horseConfig[i];
+      return seasonWins[i]*25+seasonArcPoints[i]*2.5 + h.base*0.15
+        -Math.abs(h.bestDistance-2400)/Math.max(300,h.distanceSpread)*6;
+    };
+    return score(b)-score(a);
+  }).slice(0,2);
+}
+// 凱旋門賞の馬券は国内と同じ所持金を使用。発走後は購入不可。
+function arcProbabilities(entrants){
+  const strengths=entrants.map(function(h){return Math.exp((h.rating-94)/7);});
+  const sum=strengths.reduce(function(a,b){return a+b;},0);
+  return strengths.map(function(v){return v/sum;});
+}
+function arcTicketOdds(type,picks){
+  const ps=arcRaceState.probabilities;
+  const sequences=function(xs){
+    if(xs.length<=1)return [xs];
+    return xs.flatMap(function(x,i){return sequences(xs.filter(function(_,j){return j!==i;})).map(function(t){return [x].concat(t);});});
+  };
+  const probability=function(order){
+    let rest=1,prob=1;
+    order.forEach(function(i){prob*=ps[i]/rest;rest-=ps[i];});
+    return prob;
+  };
+  let chance=0;
+  if(type==='tansho')chance=ps[picks[0]];
+  else if(type==='fukusho'){
+    // 16頭のうち3着以内になる確率（着順付き抽選を列挙）
+    for(let a=0;a<ps.length;a++)for(let b=0;b<ps.length;b++)for(let c=0;c<ps.length;c++){
+      if(a===b||a===c||b===c)continue;
+      if(a===picks[0]||b===picks[0]||c===picks[0])chance+=probability([a,b,c]);
+    }
+  }else if(type==='wide'){
+    for(let a=0;a<ps.length;a++)for(let b=0;b<ps.length;b++)for(let c=0;c<ps.length;c++){
+      if(a===b||a===c||b===c)continue;
+      const t=[a,b,c];if(t.includes(picks[0])&&t.includes(picks[1]))chance+=probability(t);
+    }
+  }else if(betSpec[type].ordered)chance=probability(picks);
+  else chance=sequences(picks).reduce(function(total,t){return total+probability(t);},0);
+  const maxOdds=type==='sanrentan'?9999:3000;
+  return Math.min(maxOdds,Math.max(type==='tansho'?1.1:1.2,Math.round(0.82/Math.max(chance,0.00001)*10)/10));
+}
+function arcBetControls(){
+  const state=arcRaceState;if(!state)return '';
+  const options=state.entrants.map(function(h,i){return '<option value="'+i+'">'+(i+1)+'番 '+arcEsc(h.name)+'</option>';}).join('');
+  return '<section class="arc-betting" id="arcBetting"><h3>🎟️ 角刈凱旋門賞・馬券売場</h3>'+
+    '<div class="arc-money">💰 所持金 <b id="arcMoney">'+money.toLocaleString()+'</b>円　／　発走前のみ購入可能</div>'+
+    '<div class="arc-bet-grid"><label>券種<select id="arcBetType" onchange="arcUpdateBetForm()">'+
+    Object.keys(betSpec).map(function(k){return '<option value="'+k+'">'+betSpec[k].name+'</option>';}).join('')+'</select></label>'+
+    [0,1,2].map(function(i){return '<label id="arcPickWrap'+i+'">'+(i+1)+'頭目<select id="arcPick'+i+'" onchange="arcUpdateBetForm()">'+options+'</select></label>';}).join('')+
+    '<label>1点の購入額（円）<input id="arcStake" type="number" min="100" step="100" value="100" oninput="arcUpdateBetForm()"></label></div>'+
+    '<div class="arc-bet-quote" id="arcBetQuote"></div><button type="button" class="arc-buy-btn" id="arcBuyBtn" onclick="arcBuyTicket()">🎟️ この馬券を購入</button>'+
+    '<div id="arcTickets" class="arc-tickets"></div></section>';
+}
+function arcSelectedPicks(){
+  const type=document.getElementById('arcBetType').value;
+  return Array.from({length:betSpec[type].count},function(_,i){return Number(document.getElementById('arcPick'+i).value);});
+}
+function arcUpdateBetForm(){
+  if(!arcRaceState)return;
+  const type=document.getElementById('arcBetType').value;
+  const count=betSpec[type].count;
+  for(let i=0;i<3;i++)document.getElementById('arcPickWrap'+i).style.display=i<count?'':'none';
+  const picks=arcSelectedPicks(),unique=new Set(picks).size===picks.length;
+  const stake=Number(document.getElementById('arcStake').value);
+  const valid=unique&&Number.isInteger(stake)&&stake>=100&&stake%100===0&&stake<=money;
+  const odds=unique?arcTicketOdds(type,picks):0;
+  document.getElementById('arcBetQuote').textContent=!unique?'同じ馬を複数選択することはできません。':
+    '参考オッズ '+odds.toFixed(1)+'倍 ／ 的中時の払戻見込 '+payoutForOdds(odds,Math.max(100,stake||100)).toLocaleString()+'円';
+  document.getElementById('arcBuyBtn').disabled=!valid||arcRaceState.finished;
+}
+function arcRenderTickets(){
+  const state=arcRaceState;if(!state)return;
+  const el=document.getElementById('arcTickets');if(!el)return;
+  el.innerHTML=state.tickets.length?'<b>購入済み馬券（'+state.tickets.length+'点）</b><div>'+state.tickets.map(function(b){
+    return '<div>🎫 '+betSpec[b.type].name+' '+b.picks.map(function(i){return (i+1)+'番';}).join(betSpec[b.type].ordered?'→':'－')+
+      '　'+b.stake.toLocaleString()+'円 × '+b.odds.toFixed(1)+'倍</div>';
+  }).join('')+'</div>':'購入済み馬券はありません。';
+  const cash=document.getElementById('arcMoney');if(cash)cash.textContent=money.toLocaleString();
+}
+function arcBuyTicket(){
+  const state=arcRaceState;if(!state||state.finished)return;
+  const type=document.getElementById('arcBetType').value,picks=arcSelectedPicks();
+  const stake=Number(document.getElementById('arcStake').value);
+  if(new Set(picks).size!==picks.length){alert('同じ馬は重複して選べません。');return;}
+  if(!Number.isInteger(stake)||stake<100||stake%100!==0){alert('購入額は100円以上、100円単位で入力してください。');return;}
+  if(stake>money){alert('所持金が足りません。');return;}
+  const odds=arcTicketOdds(type,picks);
+  state.tickets.push({type:type,picks:picks,stake:stake,odds:odds});
+  money-=stake;seasonBetTotal+=stake;seasonPurchaseCount++;
+  arcRenderTickets();arcUpdateBetForm();update();
+}
+function openArcEvent(){
+  const reps=arcRepresentatives();
+  const foreign=ARC_FOREIGN_HORSES.slice().sort(function(){return Math.random()-.5;}).slice(0,14);
+  const entrants=reps.map(function(i){return {name:names[i],country:'🇯🇵 日本',home:true,idx:i,base:horseConfig[i].base,style:horseConfig[i].style};}).concat(foreign.map(function(h){return Object.assign({home:false},h);}));
+  // 外国馬は上位GⅠ級、日本馬は実力と芝2400m適性で勝負。
+  entrants.forEach(function(h){
+    if(h.home){
+      const t=horseConfig[h.idx];
+      h.rating=t.base+seasonWins[h.idx]*1.3+Math.min(4,seasonArcPoints[h.idx]*0.11)
+        -Math.abs(t.bestDistance-2400)/Math.max(300,t.distanceSpread)*5
+        +(t.mud-0.75)*3;
+    }else h.rating=h.base;
+  });
+  arcRaceState={entrants:entrants,finished:false,order:null,tickets:[],probabilities:arcProbabilities(entrants)};
+  const body=document.getElementById('arcBody');
+  body.innerHTML='<p><b>🇯🇵 日本代表：</b>'+reps.map(function(i){return arcEsc(names[i])+'（国内GⅠ '+seasonWins[i]+'勝・選抜'+seasonArcPoints[i]+'pt）';}).join('／')+'</p>'+
+    '<table class="arc-entries"><thead><tr><th>馬番</th><th>国</th><th>出走馬</th><th>脚質</th><th>単勝</th></tr></thead><tbody>'+
+    entrants.map(function(h,i){return '<tr class="'+(h.home?'arc-japan':'')+'"><td>'+(i+1)+'</td><td>'+h.country+'</td><td>'+arcEsc(h.name)+'</td><td>'+arcEsc(h.style)+'</td><td>'+arcTicketOdds('tansho',[i]).toFixed(1)+'倍</td></tr>';}).join('')+'</tbody></table>'+arcBetControls();
+  document.getElementById('arcCommentary').textContent='パリロンシャン競馬場、芝2400m。日本代表2頭が欧州の強豪14頭に挑みます。\n起伏のあるコース、フォルスストレートを越えて最後の直線へ。';
+  arcRenderTickets();arcUpdateBetForm();
+  document.getElementById('arcWatchBtn').disabled=false;
+  document.getElementById('arcContinueBtn').disabled=true;
+  document.getElementById('arcOverlay').style.display='flex';
+}
+function watchArcRace(){
+  const state=arcRaceState;
+  if(!state || state.finished)return;
+  state.finished=true;
+  document.getElementById('arcWatchBtn').disabled=true;
+  document.getElementById('arcBuyBtn').disabled=true;
+  const e=state.entrants;
+  const pace=Math.random()<0.4?'スロー':Math.random()<0.65?'平均':'ハイ';
+  const scored=e.map(function(h,i){
+    const noise=(Math.random()+Math.random()+Math.random()+Math.random()-2)*6;
+    let styleBonus=pace==='ハイ'?(h.style==='差し'||h.style==='追込'?2:-1.5):
+      pace==='スロー'?(h.style==='先行'||h.style==='好位'?2:-1):0;
+    return {i:i,score:h.rating+noise+styleBonus};
+  }).sort(function(a,b){return b.score-a.score;});
+  state.order=scored.map(function(x){return x.i;});
+  const order=state.order, winner=e[order[0]], reps=e.map(function(h,i){return h.home?i:-1;}).filter(function(i){return i>=0;});
+  const japaneseResults=reps.map(function(i){return {horse:e[i],place:order.indexOf(i)+1};}).sort(function(a,b){return a.place-b.place;});
+  const calls=[
+    '🇫🇷 凱旋門賞、ゲートが開きました！ 世界の精鋭16頭が一斉にスタート！',
+    '前半は'+pace+'ペース。'+arcEsc(e[order[7]].name)+'が先団につけ、日本代表も懸命に追走します。',
+    'パリロンシャンの起伏を越え、フォルスストレートへ。ここから位置取りが激しくなります！',
+    '残り600m！ '+arcEsc(e[order[2]].name)+'が進出！ 日本勢は'+japaneseResults.map(function(x){return arcEsc(x.horse.name);}).join('と')+'！',
+    '最後の直線！ '+arcEsc(e[order[1]].name)+'が迫る！ しかし'+arcEsc(winner.name)+'が抜け出した！',
+    '🏆 ゴールイン！ 優勝は'+arcEsc(winner.name)+'（'+winner.country+'）！',
+    '🇯🇵 日本代表の成績：'+japaneseResults.map(function(x){return x.place+'着 '+arcEsc(x.horse.name);}).join('／')
+  ];
+  const ranks='<h3>🏆 凱旋門賞・確定着順</h3><table class="arc-entries"><thead><tr><th>着順</th><th>馬名</th><th>国</th></tr></thead><tbody>'+
+    order.map(function(i,pos){const h=e[i];return '<tr class="'+(h.home?'arc-japan':'')+'"><td>'+(pos+1)+'着</td><td>'+arcEsc(h.name)+'</td><td>'+h.country+'</td></tr>';}).join('')+'</tbody></table>';
+  document.getElementById('arcCommentary').textContent=calls.map(function(x){return x.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');}).join('\n\n');
+  let arcPayout=0;
+  const ticketResults=state.tickets.map(function(b){
+    const hit=isTicketWin(b.type,b.picks,order.slice(0,3));
+    const paid=hit?payoutForOdds(b.odds,b.stake):0;
+    arcPayout+=paid;
+    return '<div>'+(hit?'🎯 的中':'ハズレ')+' '+betSpec[b.type].name+' '+b.picks.map(function(i){return (i+1)+'番';}).join(betSpec[b.type].ordered?'→':'－')+
+      ' ／ '+b.stake.toLocaleString()+'円 × '+b.odds.toFixed(1)+'倍 → <b>'+paid.toLocaleString()+'円</b></div>';
+  });
+  money+=arcPayout;seasonPayoutTotal+=arcPayout;
+  seasonBestPayout=Math.max(seasonBestPayout,arcPayout);
+  const arcBetResult='<section class="arc-betting"><h3>🎟️ 凱旋門賞・馬券結果</h3>'+
+    (ticketResults.length?ticketResults.join(''):'馬券購入なし')+
+    '<p><b>払戻合計 '+arcPayout.toLocaleString()+'円</b> ／ 現在の所持金 '+money.toLocaleString()+'円</p></section>';
+  document.getElementById('arcBody').innerHTML=ranks+arcBetResult;
+  update();
+  document.getElementById('arcContinueBtn').disabled=false;
+}
+function finishArcEvent(){
+  if(!arcRaceState || !arcRaceState.finished)return;
+  document.getElementById('arcOverlay').style.display='none';
+  arcRaceState=null;
+  // 次の国内GⅠに進む。凱旋門賞は24レースの集計対象外。
+  newRace();
+}
+
 function newRace(){
   // 有馬記念まで終わったらシーズン終了。
   if(seasonRaceIndex>=RACE_SCHEDULE.length-1){
     showSeasonResult();
     return;
+  }
+
+  // スプリンターズS後に凱旋門賞を挿入。国内24戦のカウントには含めない。
+  if(seasonRaceIndex===12 && !arcEventDone){
+    arcEventDone=true;
+    if(confirm('🇫🇷 凱旋門賞に角刈ダービーの成績優秀馬2頭が招待されました！\nフランス・ロンシャン競馬場で世界の強豪と対決します。\n\n凱旋門賞の馬券を購入・観戦しますか？')){
+      openArcEvent();
+      return;
+    }
   }
 
   // 「次のレース」を押したこの瞬間だけマノファイナンスを判定。
@@ -4854,7 +5086,7 @@ document.getElementById('stake').addEventListener('input',function(){
 
 loadHorseSettings();
 renderHorseEditor();
-const KAKUGARI_UPDATE_VERSION='2026-10-14-forum-conversation-variety';
+const KAKUGARI_UPDATE_VERSION='2026-10-15-arc-betting';
 function showUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.add('is-open');}
 function closeUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.remove('is-open');try{localStorage.setItem('kakugari-last-seen-update',KAKUGARI_UPDATE_VERSION);}catch(e){}}
 prepareRace();
@@ -4863,6 +5095,20 @@ renderCommentaryMode();
 try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSION)showUpdateHistory();}catch(e){showUpdateHistory();}
 </script>
 
+
+<div id="arcOverlay" class="arc-overlay" role="dialog" aria-modal="true" aria-labelledby="arcTitle">
+ <div class="arc-card">
+  <h2 id="arcTitle">🇫🇷 凱旋門賞・ロンシャン競馬場</h2>
+  <div class="arc-sub">10月・GⅠ／芝2400m／右回り・起伏のあるコースと長い直線／海外遠征・馬券発売あり</div>
+  <div id="arcBody"></div>
+  <div id="arcCommentary" class="arc-commentary" aria-live="polite">日本代表2頭が世界の強豪に挑みます。</div>
+  <div class="arc-buttons">
+   <button id="arcWatchBtn" onclick="watchArcRace()">🏁 馬券を締め切ってレースを観戦</button>
+   <button id="arcContinueBtn" onclick="finishArcEvent()" disabled>🇯🇵 帰国して秋華賞へ</button>
+  </div>
+  <div class="arc-note">※凱旋門賞の馬券はゲーム内所持金で購入できます（100円単位）。払戻は所持金に加算。マノファイナンスの利息加算はありません。海外馬・オッズ・結果はゲーム内の創作です。</div>
+ </div>
+</div>
 <div id="seasonResultOverlay" class="season-result-overlay" style="display:none">
   <div class="season-result-card">
     <div class="season-result-crown">🏆</div>
@@ -4895,6 +5141,8 @@ try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSI
 <div class="update-history-overlay" id="updateHistoryOverlay" role="dialog" aria-modal="true" aria-labelledby="updateHistoryHeading" onclick="if(event.target===this)closeUpdateHistory()">
   <div class="update-history-dialog">
     <h2 id="updateHistoryHeading">📋 角刈ダービー 更新履歴</h2>
+    <h3>🆕 2026/10/15 角刈凱旋門賞の馬券発売</h3>
+    <ul><li>凱旋門賞でも単勝・複勝・馬連・馬単・ワイド・三連複・三連単を購入可能に。海外馬を含む16頭から選択できます。</li><li>参考オッズ、購入済み馬券、確定後の的中・払戻表示を追加。ゲーム内所持金と年間収支にも反映します。</li></ul>
     <p style="color:#64748b">最新版：2026年10月14日（雑談を競馬中心に再調整）</p>
     <h3>🆕 2026/10/15 コース特性シミュレーション</h3><ul><li>競馬場ごとの坂・直線長・小回り・芝の重さを実装。馬のパワー・器用さ・末脚との相性を着順計算に反映。</li><li>コース特徴を出走前に表示し、実況でも坂や直線の長さを紹介。勝ち時計にも芝の重さを簡易反映。</li><li>実際の競馬場の特徴を参考にしたゲーム向けの簡略モデルであり、厳密なJRAコースデータの再現ではありません。</li></ul>
     <h3>2026/10/14 雑談を競馬に関連付ける調整</h3>\n    <ul><li>食事・家族・仕事・天気などの雑談をすべて競馬に関係する内容に変更。話題の幅は残しつつ競馬掲示板らしさを優先。</li><li>雑談への返信も馬券・予想・競馬場などの話に沿うよう見直しました。</li></ul>\n    <h3>2026/10/14 掲示板の雑談・会話を大幅拡充</h3>
