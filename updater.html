@@ -18,7 +18,7 @@
 <div class="status uploadlog" id="uploadStatus" role="status" aria-live="polite">ファイルを選択し、トークンを入力するとアップロードできます。</div>
 <details><summary>従来どおりGitHubの画面から手動アップロードする</summary><p>トークンを使わない場合はこちらから更新できます。</p><div class="actions"><a class="btn" href="https://github.com/monjasama-ops/kakugari-derby/upload/main" target="_blank" rel="noopener">GitHubアップロード画面 ↗</a><a class="btn" href="https://github.com/monjasama-ops/kakugari-derby" target="_blank" rel="noopener">ファイル一覧 ↗</a><button class="btn" id="copyCommit">更新メッセージをコピー</button></div></details>
 </div>
-<div class="card"><div class="head"><span class="num">3</span>公開状況を確認</div><div class="actions"><a class="btn primary" id="gameLink" href="https://monjasama-ops.github.io/kakugari-derby/" target="_blank" rel="noopener">🎮 公開ゲームを開く ↗</a><a class="btn" href="https://github.com/monjasama-ops/kakugari-derby/actions" target="_blank" rel="noopener">⚙ 公開処理を見る ↗</a><button class="btn" id="refresh" type="button">🔄 公開情報を取得</button><a class="btn" href="https://github.com/monjasama-ops/kakugari-derby/settings/pages" target="_blank" rel="noopener">🌐 Pages設定を開く</a></div><div class="status" id="remoteStatus" aria-live="polite">「公開情報を取得」でGitHubの公開リポジトリ情報を確認できます。</div><p class="tiny">GitHub APIから公開情報を取得します。API制限・通信環境により確認できない場合もあります。実際の公開完了はActionsの緑色チェックとゲーム画面で確認してください。</p></div>
+<div class="card"><div class="head"><span class="num">3</span>公開状況を確認</div><div class="actions"><a class="btn primary" id="gameLink" href="https://monjasama-ops.github.io/kakugari-derby/" target="_blank" rel="noopener">🎮 公開ゲームを開く ↗</a><a class="btn" href="https://github.com/monjasama-ops/kakugari-derby/actions" target="_blank" rel="noopener">⚙ 公開処理を見る ↗</a><button class="btn" id="refresh" type="button">🔄 公開情報を取得</button><a class="btn" href="https://github.com/monjasama-ops/kakugari-derby/settings/pages" target="_blank" rel="noopener">🌐 Pages設定を開く</a></div><div class="status" id="deployCheckStatus" role="status" aria-live="polite">📡 反映チェッカー：まだ確認していません。更新するHTMLを選択して「反映をチェック」を押してください。</div><div class="actions"><button class="btn primary full" type="button" id="deployCheck">🔍 更新が公開サイトに反映されたかチェック</button></div><p class="tiny">選択したHTMLの内容と、GitHub Pagesで現在配信されているHTMLをSHA-256で照合します。完全一致なら反映済みです。ファイル未選択の場合はGitHub上の最新版と公開版を照合します。更新後は数分待って再チェックできます。トークンは使用しません。</p><div class="status" id="remoteStatus" aria-live="polite">「公開情報を取得」でGitHubの公開リポジトリ情報を確認できます。</div><p class="tiny">GitHub APIから公開情報を取得します。API制限・通信環境により確認できない場合もあります。実際の公開完了はActionsの緑色チェックとゲーム画面で確認してください。</p></div>
 <div class="card"><div class="head"><span class="num">4</span>更新チェックリスト</div><div class="progress"><div id="bar"></div></div><div class="tiny" id="progressText">0 / 4 完了</div><label class="check"><input type="checkbox" data-check="0"><span>最新版のHTMLをダウンロード・確認した</span></label><label class="check"><input type="checkbox" data-check="1"><span>GitHubにHTMLをアップロードした</span></label><label class="check"><input type="checkbox" data-check="2"><span>更新の保存（コミット）が完了した</span></label><label class="check"><input type="checkbox" data-check="3"><span>公開ゲームで新機能を確認した</span></label><div class="actions"><button class="btn" id="reset">チェックをリセット</button><button class="btn" id="copyUrl">🔗 公開URLをコピー</button></div></div>
 <footer>GitHubトークンは保存を明示的にONにした場合だけ、このブラウザのlocalStorageに保存されます。保存OFFでは保持しません。<br>このページ自体は公開可能な補助ツールです。</footer>
 </main><script>
@@ -75,6 +75,36 @@ $('copyCommit').addEventListener('click',()=>copy('角刈ダービー更新 '+ne
 $('gameLink').addEventListener('click',e=>{e.preventDefault();window.open(base+'?v='+Date.now(),'_blank','noopener')});
 $('refresh').addEventListener('click',async()=>{const s=$('remoteStatus');s.textContent='GitHubから確認中…';$('refresh').disabled=true;try{const res=await fetch('https://api.github.com/repos/monjasama-ops/kakugari-derby/commits/main',{headers:{Accept:'application/vnd.github+json'}});if(!res.ok)throw Error('GitHub API HTTP '+res.status);const data=await res.json();const date=new Date(data.commit.committer.date).toLocaleString('ja-JP');s.replaceChildren(el('div','最新のmain更新：'+date),el('div','更新メッセージ：'+data.commit.message.split('\n')[0]),el('div','コミット：'+data.sha.slice(0,7)),el('div','※これはGitHubへの保存情報で、Pagesの公開完了とは異なります。'));}catch(err){s.textContent='公開情報を取得できませんでした（'+err.message+'）。Actionsから確認してください。'}finally{$('refresh').disabled=false}});
 
+// GitHub Pagesの配信実体と比較する反映チェッカー（トークン不要）
+const deployedFileUrl=name=>base+encodeURIComponent(name)+'?check='+Date.now();
+async function digestHex(bytes){const hash=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(hash),v=>v.toString(16).padStart(2,'0')).join('')}
+async function checkDeployment(){
+ const btn=$('deployCheck'),panel=$('deployCheckStatus'),target=$('target').value;
+ btn.disabled=true;panel.className='status';panel.textContent='🔍 '+target+' の公開版を取得して照合しています…';
+ try{
+  let expectedBytes,expectedSource;
+  if(selectedFile && selectedBytes!=null){expectedBytes=new TextEncoder().encode(selectedBytes);expectedSource='選択ファイル '+selectedFile.name}
+  else{
+   const r=await fetch('https://api.github.com/repos/monjasama-ops/kakugari-derby/contents/'+encodeURIComponent(target)+'?ref=main',{cache:'no-store',headers:{Accept:'application/vnd.github.raw+json'}});
+   if(!r.ok)throw Error('GitHub側のファイル取得に失敗（HTTP '+r.status+'）');
+   expectedBytes=new Uint8Array(await r.arrayBuffer());expectedSource='GitHub main の '+target;
+  }
+  const response=await fetch(deployedFileUrl(target),{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+  if(!response.ok)throw Error('公開ページを取得できません（HTTP '+response.status+'）');
+  const publicBytes=new Uint8Array(await response.arrayBuffer());
+  const [expectedHash,publicHash]=await Promise.all([digestHex(expectedBytes),digestHex(publicBytes)]);
+  const matched=expectedHash===publicHash;
+  panel.className='status '+(matched?'good':'bad');
+  panel.replaceChildren(el('strong',matched?'✅ 公開サイトに反映されています！':'⏳ まだ公開版と一致していません',matched?'ok':'warning'),
+    el('div','比較元：'+expectedSource),el('div','公開先：'+target),
+    el('div','照合日時：'+new Date().toLocaleString('ja-JP')),
+    el('div',matched?'ファイルの内容が完全一致しました。':'GitHub Pagesの反映待ち、または別バージョンのファイルが公開されています。数分後に再チェックしてください。'),
+    el('div','※内容の一致を確認するもので、ゲームの動作を保証するものではありません。','tiny'));
+  if(matched&&target==='index.html'){checks[3].checked=true;updateChecks()}
+ }catch(e){panel.className='status bad';panel.textContent='⚠️ 照合できませんでした：'+e.message+'。更新センターをGitHub Pages上で開いて再試行してください。'}
+ finally{btn.disabled=false}
+}
+$('deployCheck').addEventListener('click',checkDeployment);
 const ghApi='https://api.github.com/repos/monjasama-ops/kakugari-derby/contents/';
 let uploading=false;
 function updateUploadButton(){const ready=!!selectedBytes && /<html\b|<!doctype\s+html/i.test(selectedBytes) && !!$('token').value.trim() && !uploading;$('directUpload').disabled=!ready}
