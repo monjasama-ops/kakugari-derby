@@ -597,7 +597,8 @@ h1{color:#134c38;letter-spacing:.045em}
 </div>
 <div id="racePickerPanel" class="race-picker" hidden>
   <div class="race-picker-filters"><label>月 <select id="raceMonthFilter" onchange="renderRacePicker()"><option value="all">すべて</option><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></label>
-  <label>格付 <select id="raceGradeFilter" onchange="renderRacePicker()"><option value="all">すべて</option><option>GⅠ</option><option>GⅡ</option><option>GⅢ</option></select></label></div>
+  <label>開催区分 <select id="raceRegionFilter" onchange="renderRacePicker()"><option value="all">中央＋地方</option><option value="central">中央</option><option value="local">地方</option></select></label>
+  <label>格付 <select id="raceGradeFilter" onchange="renderRacePicker()"><option value="all">すべて</option><option>GⅠ</option><option>GⅡ</option><option>GⅢ</option><option>JpnⅠ</option><option>JpnⅡ</option><option>JpnⅢ</option></select></label></div>
   <div id="raceCount" class="race-picker-count"></div>
   <label for="racePickSelect">挑戦するレース</label><select id="racePickSelect" class="race-pick-select"></select>
   <button type="button" onclick="selectRaceAndStart()">🏁 このレースに挑む</button>
@@ -912,7 +913,469 @@ const EXTRA_GRADED_RACES = [
   {month:12,grade:'GⅢ',name:'角刈カペラS',original:'カペラS',venue:'中山',surface:'ダ',distance:1200},
   {month:12,grade:'GⅢ',name:'角刈ターコイズS',original:'ターコイズS',venue:'中山',surface:'芝',distance:1600}
 ];
-const ALL_SELECTABLE_RACES=[...RACE_SCHEDULE,...EXTRA_GRADED_RACES].sort((a,b)=>a.month-b.month||({"GⅠ":0,"GⅡ":1,"GⅢ":2}[a.grade]-{"GⅠ":0,"GⅡ":1,"GⅢ":2}[b.grade])||a.original.localeCompare(b.original,'ja'));
+const LOCAL_OFFICIAL_RACES=[
+  {
+    "month": 1,
+    "grade": "JpnⅢ",
+    "name": "角刈ブルーバードカップ",
+    "original": "ブルーバードカップ",
+    "venue": "船橋",
+    "surface": "ダ",
+    "distance": 1800,
+    "region": "local"
+  },
+  {
+    "month": 2,
+    "grade": "JpnⅢ",
+    "name": "角刈クイーン賞",
+    "original": "クイーン賞",
+    "venue": "船橋",
+    "surface": "ダ",
+    "distance": 1800,
+    "region": "local"
+  },
+  {
+    "month": 2,
+    "grade": "JpnⅢ",
+    "name": "角刈佐賀記念",
+    "original": "佐賀記念",
+    "venue": "佐賀",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  },
+  {
+    "month": 2,
+    "grade": "JpnⅢ",
+    "name": "角刈雲取賞",
+    "original": "雲取賞",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 1800,
+    "region": "local"
+  },
+  {
+    "month": 2,
+    "grade": "JpnⅢ",
+    "name": "角刈かきつばた記念",
+    "original": "かきつばた記念",
+    "venue": "名古屋",
+    "surface": "ダ",
+    "distance": 1500,
+    "region": "local"
+  },
+  {
+    "month": 3,
+    "grade": "JpnⅡ",
+    "name": "角刈ダイオライト記念",
+    "original": "ダイオライト記念",
+    "venue": "船橋",
+    "surface": "ダ",
+    "distance": 2400,
+    "region": "local"
+  },
+  {
+    "month": 3,
+    "grade": "JpnⅢ",
+    "name": "角刈黒船賞",
+    "original": "黒船賞",
+    "venue": "高知",
+    "surface": "ダ",
+    "distance": 1400,
+    "region": "local"
+  },
+  {
+    "month": 3,
+    "grade": "JpnⅡ",
+    "name": "角刈京浜盃",
+    "original": "京浜盃",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 1700,
+    "region": "local"
+  },
+  {
+    "month": 4,
+    "grade": "JpnⅢ",
+    "name": "角刈兵庫女王盃",
+    "original": "兵庫女王盃",
+    "venue": "園田",
+    "surface": "ダ",
+    "distance": 1870,
+    "region": "local"
+  },
+  {
+    "month": 4,
+    "grade": "JpnⅠ",
+    "name": "角刈川崎記念",
+    "original": "川崎記念",
+    "venue": "川崎",
+    "surface": "ダ",
+    "distance": 2100,
+    "region": "local"
+  },
+  {
+    "month": 4,
+    "grade": "JpnⅢ",
+    "name": "角刈東京スプリント",
+    "original": "東京スプリント",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 1200,
+    "region": "local"
+  },
+  {
+    "month": 4,
+    "grade": "JpnⅠ",
+    "name": "角刈羽田盃",
+    "original": "羽田盃",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 1800,
+    "region": "local"
+  },
+  {
+    "month": 5,
+    "grade": "JpnⅡ",
+    "name": "角刈名古屋グランプリ",
+    "original": "名古屋グランプリ",
+    "venue": "名古屋",
+    "surface": "ダ",
+    "distance": 2100,
+    "region": "local"
+  },
+  {
+    "month": 5,
+    "grade": "JpnⅠ",
+    "name": "角刈かしわ記念",
+    "original": "かしわ記念",
+    "venue": "船橋",
+    "surface": "ダ",
+    "distance": 1600,
+    "region": "local"
+  },
+  {
+    "month": 5,
+    "grade": "JpnⅡ",
+    "name": "角刈兵庫チャンピオンシップ",
+    "original": "兵庫チャンピオンシップ",
+    "venue": "園田",
+    "surface": "ダ",
+    "distance": 1400,
+    "region": "local"
+  },
+  {
+    "month": 5,
+    "grade": "JpnⅡ",
+    "name": "角刈エンプレス杯",
+    "original": "エンプレス杯",
+    "venue": "川崎",
+    "surface": "ダ",
+    "distance": 2100,
+    "region": "local"
+  },
+  {
+    "month": 6,
+    "grade": "JpnⅠ",
+    "name": "角刈東京ダービー",
+    "original": "東京ダービー",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  },
+  {
+    "month": 6,
+    "grade": "JpnⅡ",
+    "name": "角刈関東オークス",
+    "original": "関東オークス",
+    "venue": "川崎",
+    "surface": "ダ",
+    "distance": 2100,
+    "region": "local"
+  },
+  {
+    "month": 6,
+    "grade": "JpnⅠ",
+    "name": "角刈さきたま杯",
+    "original": "さきたま杯",
+    "venue": "浦和",
+    "surface": "ダ",
+    "distance": 1400,
+    "region": "local"
+  },
+  {
+    "month": 7,
+    "grade": "JpnⅠ",
+    "name": "角刈帝王賞",
+    "original": "帝王賞",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  },
+  {
+    "month": 7,
+    "grade": "JpnⅢ",
+    "name": "角刈スパーキングレディーカップ",
+    "original": "スパーキングレディーカップ",
+    "venue": "川崎",
+    "surface": "ダ",
+    "distance": 1600,
+    "region": "local"
+  },
+  {
+    "month": 7,
+    "grade": "JpnⅢ",
+    "name": "角刈マーキュリーカップ",
+    "original": "マーキュリーカップ",
+    "venue": "盛岡",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  },
+  {
+    "month": 8,
+    "grade": "JpnⅢ",
+    "name": "角刈クラスターカップ",
+    "original": "クラスターカップ",
+    "venue": "盛岡",
+    "surface": "ダ",
+    "distance": 1200,
+    "region": "local"
+  },
+  {
+    "month": 8,
+    "grade": "JpnⅢ",
+    "name": "角刈北海道スプリントカップ",
+    "original": "北海道スプリントカップ",
+    "venue": "門別",
+    "surface": "ダ",
+    "distance": 1200,
+    "region": "local"
+  },
+  {
+    "month": 8,
+    "grade": "JpnⅢ",
+    "name": "角刈ブリーダーズゴールドカップ",
+    "original": "ブリーダーズゴールドカップ",
+    "venue": "門別",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  },
+  {
+    "month": 9,
+    "grade": "JpnⅡ",
+    "name": "角刈不来方賞",
+    "original": "不来方賞",
+    "venue": "盛岡",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  },
+  {
+    "month": 9,
+    "grade": "JpnⅢ",
+    "name": "角刈サマーチャンピオン",
+    "original": "サマーチャンピオン",
+    "venue": "佐賀",
+    "surface": "ダ",
+    "distance": 1400,
+    "region": "local"
+  },
+  {
+    "month": 9,
+    "grade": "JpnⅢ",
+    "name": "角刈白山大賞典",
+    "original": "白山大賞典",
+    "venue": "金沢",
+    "surface": "ダ",
+    "distance": 2100,
+    "region": "local"
+  },
+  {
+    "month": 9,
+    "grade": "JpnⅢ",
+    "name": "角刈オーバルスプリント",
+    "original": "オーバルスプリント",
+    "venue": "浦和",
+    "surface": "ダ",
+    "distance": 1400,
+    "region": "local"
+  },
+  {
+    "month": 9,
+    "grade": "JpnⅡ",
+    "name": "角刈日本テレビ盃",
+    "original": "日本テレビ盃",
+    "venue": "船橋",
+    "surface": "ダ",
+    "distance": 1800,
+    "region": "local"
+  },
+  {
+    "month": 10,
+    "grade": "JpnⅢ",
+    "name": "角刈マリーンカップ",
+    "original": "マリーンカップ",
+    "venue": "船橋",
+    "surface": "ダ",
+    "distance": 1800,
+    "region": "local"
+  },
+  {
+    "month": 10,
+    "grade": "JpnⅡ",
+    "name": "角刈レディスプレリュード",
+    "original": "レディスプレリュード",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 1800,
+    "region": "local"
+  },
+  {
+    "month": 10,
+    "grade": "JpnⅠ",
+    "name": "角刈ジャパンダートクラシック",
+    "original": "ジャパンダートクラシック",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  },
+  {
+    "month": 10,
+    "grade": "JpnⅡ",
+    "name": "角刈東京盃",
+    "original": "東京盃",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 1200,
+    "region": "local"
+  },
+  {
+    "month": 10,
+    "grade": "JpnⅠ",
+    "name": "角刈マイルチャンピオンシップ南部杯",
+    "original": "マイルチャンピオンシップ南部杯",
+    "venue": "盛岡",
+    "surface": "ダ",
+    "distance": 1600,
+    "region": "local"
+  },
+  {
+    "month": 10,
+    "grade": "JpnⅢ",
+    "name": "角刈エーデルワイス賞",
+    "original": "エーデルワイス賞",
+    "venue": "門別",
+    "surface": "ダ",
+    "distance": 1200,
+    "region": "local"
+  },
+  {
+    "month": 11,
+    "grade": "JpnⅢ",
+    "name": "角刈JBC2歳優駿",
+    "original": "JBC2歳優駿",
+    "venue": "門別",
+    "surface": "ダ",
+    "distance": 1800,
+    "region": "local"
+  },
+  {
+    "month": 11,
+    "grade": "JpnⅠ",
+    "name": "角刈JBCクラシック",
+    "original": "JBCクラシック",
+    "venue": "金沢",
+    "surface": "ダ",
+    "distance": 2100,
+    "region": "local"
+  },
+  {
+    "month": 11,
+    "grade": "JpnⅠ",
+    "name": "角刈JBCスプリント",
+    "original": "JBCスプリント",
+    "venue": "金沢",
+    "surface": "ダ",
+    "distance": 1400,
+    "region": "local"
+  },
+  {
+    "month": 11,
+    "grade": "JpnⅠ",
+    "name": "角刈JBCレディスクラシック",
+    "original": "JBCレディスクラシック",
+    "venue": "金沢",
+    "surface": "ダ",
+    "distance": 1500,
+    "region": "local"
+  },
+  {
+    "month": 11,
+    "grade": "JpnⅡ",
+    "name": "角刈浦和記念",
+    "original": "浦和記念",
+    "venue": "浦和",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  },
+  {
+    "month": 11,
+    "grade": "JpnⅡ",
+    "name": "角刈兵庫ジュニアグランプリ",
+    "original": "兵庫ジュニアグランプリ",
+    "venue": "園田",
+    "surface": "ダ",
+    "distance": 1400,
+    "region": "local"
+  },
+  {
+    "month": 12,
+    "grade": "JpnⅠ",
+    "name": "角刈全日本2歳優駿",
+    "original": "全日本2歳優駿",
+    "venue": "川崎",
+    "surface": "ダ",
+    "distance": 1600,
+    "region": "local"
+  },
+  {
+    "month": 12,
+    "grade": "JpnⅢ",
+    "name": "角刈名古屋大賞典",
+    "original": "名古屋大賞典",
+    "venue": "名古屋",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  },
+  {
+    "month": 12,
+    "grade": "JpnⅢ",
+    "name": "角刈兵庫ゴールドトロフィー",
+    "original": "兵庫ゴールドトロフィー",
+    "venue": "園田",
+    "surface": "ダ",
+    "distance": 1400,
+    "region": "local"
+  },
+  {
+    "month": 12,
+    "grade": "JpnⅠ",
+    "name": "角刈東京大賞典",
+    "original": "東京大賞典",
+    "venue": "大井",
+    "surface": "ダ",
+    "distance": 2000,
+    "region": "local"
+  }
+];
+const ALL_SELECTABLE_RACES=[...RACE_SCHEDULE,...EXTRA_GRADED_RACES,...LOCAL_OFFICIAL_RACES].sort((a,b)=>a.month-b.month||({"GⅠ":0,"JpnⅠ":0,"GⅡ":1,"JpnⅡ":1,"GⅢ":2,"JpnⅢ":2}[a.grade]-{"GⅠ":0,"JpnⅠ":0,"GⅡ":1,"JpnⅡ":1,"GⅢ":2,"JpnⅢ":2}[b.grade])||a.original.localeCompare(b.original,'ja'));
 let racePlayMode='series';
 let selectedCustomRace=null;
 function renderRaceModeUI(){
@@ -924,7 +1387,8 @@ function renderRaceModeUI(){
 }
 function renderRacePicker(){
  const month=document.getElementById('raceMonthFilter').value,grade=document.getElementById('raceGradeFilter').value;
- const list=ALL_SELECTABLE_RACES.filter(r=>(month==='all'||String(r.month)===month)&&(grade==='all'||r.grade===grade));
+ const region=document.getElementById('raceRegionFilter').value;
+ const list=ALL_SELECTABLE_RACES.filter(r=>(month==='all'||String(r.month)===month)&&(grade==='all'||r.grade===grade)&&(region==='all'||(region==='local'?r.region==='local':r.region!=='local')));
  const select=document.getElementById('racePickSelect');
  const previous=selectedCustomRace?ALL_SELECTABLE_RACES.indexOf(selectedCustomRace):-1;
  select.innerHTML=list.map(r=>'<option value="'+ALL_SELECTABLE_RACES.indexOf(r)+'">'+r.month+'月 '+r.grade+' '+r.name+'（'+r.venue+' '+r.surface+r.distance+'m）</option>').join('');
