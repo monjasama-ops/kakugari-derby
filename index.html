@@ -585,6 +585,12 @@ h1{color:#134c38;letter-spacing:.045em}
 <style>
 .race-mode-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0;padding:12px;background:#f4f0df;border:2px solid #bda35a;border-radius:12px}.race-mode-bar label{cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:700}.race-mode-bar input{width:18px;height:18px;accent-color:#356b49}.race-picker{padding:14px;margin-bottom:14px;border:1px solid #b9c9bc;background:#edf6ef;border-radius:10px}.race-picker[hidden]{display:none}.race-picker-filters{display:flex;gap:12px;flex-wrap:wrap}.race-picker label{font-weight:700}.race-picker select{min-height:42px;font-size:16px;padding:6px;border:1px solid #899f91;border-radius:7px;max-width:100%}.race-pick-select{display:block;width:100%;margin:7px 0 10px}.race-picker button{padding:12px;background:#246746;color:white;border:0;border-radius:8px;font-weight:800}.race-picker-count,.race-picker small{display:block;margin:8px 0;color:#4e6153}
 </style>
+<style>
+.season-prize-panel{margin:10px 0 14px;padding:13px 15px;border:1px solid #bfa66d;border-radius:11px;background:#fff9e8;color:#4c3b19;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.season-prize-panel strong{font-size:.94rem}.season-prize-total{font-size:1.4rem;font-weight:900;margin-left:auto;font-variant-numeric:tabular-nums}
+.season-prize-panel details{width:100%}.season-prize-panel summary{cursor:pointer;font-weight:700;padding:6px 0}.season-prize-panel small{width:100%;font-size:.76rem;color:#74674c}
+.season-prize-horse{display:flex;justify-content:space-between;gap:8px;padding:5px 2px;border-bottom:1px solid #e8dbb9}.season-prize-horse b{white-space:nowrap}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -603,6 +609,11 @@ h1{color:#134c38;letter-spacing:.045em}
   <label for="racePickSelect">挑戦するレース</label><select id="racePickSelect" class="race-pick-select"></select>
   <button type="button" onclick="selectRaceAndStart()">🏁 このレースに挑む</button>
   <small>自由選択は年間24戦の進行を変えません。国内の主要JRA平地重賞を収録したゲーム用カタログです。開催時期・条件は年によって変わります。</small>
+</div>
+<div id="seasonPrizePanel" class="season-prize-panel" aria-live="polite">
+  <strong>🐎 年間GⅠ・馬別獲得賞金ランキング</strong>
+  <div id="seasonPrizeBreakdown">まだ賞金獲得馬はいません。</div>
+  <small>各馬の1～5着の賞金を累計します。馬券の所持金には加算されません。</small>
 </div>
 <div id="seasonRaceBanner" class="season-race-banner">
   <div id="seasonRaceMain" class="season-race-main">1レース目／全24レース　2月【角刈フェブラリーS】</div>
@@ -1399,7 +1410,7 @@ function changeRacePlayMode(mode){
  if(racing){alert('レース実況中はモードを切り替えられません。');renderRaceModeUI();return;}
  if(mode===racePlayMode)return;
  if(!confirm('モードを切り替えますか？ 現在の未確定の馬券は取り消されます。')){renderRaceModeUI();return;}
- racePlayMode=mode;selectedCustomRace=null;renderRaceModeUI();
+ racePlayMode=mode;selectedCustomRace=null;renderRaceModeUI();renderAnnualPrize();
  if(mode==='series'){resetForChosenRace();}else{renderSeasonRaceBanner();}
 }
 function selectRaceAndStart(){
@@ -1616,6 +1627,8 @@ let seasonPayoutTotal=0;
 let seasonHitTickets=0;
 let seasonPurchaseCount=0;
 let seasonWins=Array(18).fill(0);
+let seasonPrizeByHorse=Array(18).fill(0);
+let seasonPrizeTotal=0;
 let seasonArcPoints=Array(18).fill(0);
 let arcEventDone=false;
 let arcRaceState=null;
@@ -1744,6 +1757,7 @@ function chooseDistance(){
   raceGrade=r.grade;
   distanceCategory=distanceCategoryFor(raceDistance);
   renderSeasonRaceBanner();
+  renderAnnualPrize();
 }
 
 function distanceTrait(i){
@@ -5309,6 +5323,7 @@ function finish(order){
   seasonBestPayout=Math.max(seasonBestPayout,payout);
   if(order && order.length){
     seasonWins[order[0]]++;
+    awardAnnualPrize(order);
     // 1～5着を対象に海外遠征選抜ポイントを蓄積（GⅠ勝利を重視）。
     [10,6,4,2,1].forEach(function(pt,pos){if(order[pos]!==undefined)seasonArcPoints[order[pos]]+=pt;});
   }
@@ -5363,6 +5378,32 @@ function finish(order){
 }
 
 
+// ゲーム内の年間GⅠ賞金。実際のJRA賞金表とは異なる固定モデル。
+function annualPrizeTable(){
+  const race=currentScheduledRace();
+  const name=race&&race.name||'';
+  const isMajor=/有馬|ジャパンカップ|ダービー|天皇賞/.test(name);
+  return isMajor?[500000000,200000000,125000000,75000000,50000000]:[200000000,80000000,50000000,30000000,20000000];
+}
+function awardAnnualPrize(order){
+  if(racePlayMode!=='series'||!Array.isArray(order))return;
+  const amounts=annualPrizeTable();
+  order.slice(0,5).forEach((idx,pos)=>{
+    if(!Number.isInteger(idx)||idx<0||idx>=seasonPrizeByHorse.length)return;
+    seasonPrizeByHorse[idx]+=amounts[pos];
+    seasonPrizeTotal+=amounts[pos];
+  });
+  renderAnnualPrize();
+}
+function renderAnnualPrize(){
+  const panel=document.getElementById('seasonPrizePanel');
+  if(!panel)return;
+  panel.hidden=racePlayMode!=='series';
+  const rows=seasonPrizeByHorse.map((v,i)=>({v,i})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  document.getElementById('seasonPrizeBreakdown').innerHTML=rows.length
+    ?rows.map((x,rank)=>'<div class="season-prize-horse"><span>'+(rank+1)+'位　'+String(names[x.i]).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</span><b>'+x.v.toLocaleString('ja-JP')+'円</b></div>').join('')
+    :'まだ賞金獲得馬はいません。';
+}
 function showSeasonResult(){
   const overlay=document.getElementById('seasonResultOverlay');
   const body=document.getElementById('seasonResultBody');
@@ -5386,6 +5427,7 @@ function showSeasonResult(){
       '<div class="season-result-stat">シーズン所持金増減<b>'+(net>=0?'+':'')+net.toLocaleString()+'円</b></div>'+
       '<div class="season-result-stat">馬券購入総額<b>'+seasonBetTotal.toLocaleString()+'円</b></div>'+
       '<div class="season-result-stat">払戻総額<b>'+seasonPayoutTotal.toLocaleString()+'円</b></div>'+
+      '<div class="season-result-stat">賞金王（馬）<b>'+(()=>{const best=seasonPrizeByHorse.indexOf(Math.max(...seasonPrizeByHorse));return seasonPrizeByHorse[best]>0?names[best]+'：'+seasonPrizeByHorse[best].toLocaleString()+'円':'該当なし';})()+'</b></div>'+
       '<div class="season-result-stat">最高払戻<b>'+seasonBestPayout.toLocaleString()+'円</b></div>'+
       '<div class="season-result-stat">購入回数<b>'+seasonPurchaseCount.toLocaleString()+'回</b></div>'+
       '<div class="season-result-stat">払戻ありレース<b>'+seasonHitTickets.toLocaleString()+'／24</b></div>'+
@@ -5407,6 +5449,7 @@ function restartSeason(){
   seasonHitTickets=0;
   seasonPurchaseCount=0;
   seasonWins=Array(18).fill(0);
+  seasonPrizeByHorse=Array(18).fill(0);seasonPrizeTotal=0;renderAnnualPrize();
   seasonArcPoints=Array(18).fill(0);
   arcEventDone=false;
   arcRaceState=null;
@@ -5840,7 +5883,8 @@ try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSI
 <div class="update-history-overlay" id="updateHistoryOverlay" role="dialog" aria-modal="true" aria-labelledby="updateHistoryHeading" onclick="if(event.target===this)closeUpdateHistory()">
   <div class="update-history-dialog">
     <h2 id="updateHistoryHeading">📋 角刈ダービー 更新履歴</h2>
-    <h3>🆕 2026/10/17 プレイモード切替・重賞レース選択</h3><ul><li>画面上部に「Ｇ１に連続で挑む」「レースを選択して挑む」を追加。自由選択ではGⅠ・GⅡ・GⅢの主要平地重賞を月・格付で絞り込み可能。</li><li>自由選択の結果は馬券収支へ反映。年間GⅠ24戦の進行には影響しません。</li></ul>
+    <h3>🆕 2026/10/17 年間GⅠ・獲得賞金表示</h3><ul><li>年間GⅠモード上部に馬ごとの獲得賞金ランキングを表示。プレイヤーの獲得賞金合計は表示しません。</li><li>1～5着にゲーム用賞金を加算。馬券所持金には加算せず、シーズン再開時にリセット。</li></ul>
+    <h3>2026/10/17 プレイモード切替・重賞レース選択</h3><ul><li>画面上部に「Ｇ１に連続で挑む」「レースを選択して挑む」を追加。自由選択ではGⅠ・GⅡ・GⅢの主要平地重賞を月・格付で絞り込み可能。</li><li>自由選択の結果は馬券収支へ反映。年間GⅠ24戦の進行には影響しません。</li></ul>
     <h3>2026/10/16 角刈凱旋門賞・専用ロゴと長編実況</h3>
     <ul><li>海外遠征イベントの名称を「角刈凱旋門賞」に統一。専用の金×深緑SVGレースロゴを追加しました。</li><li>スタート前から道中、ロンシャンの起伏、フォルスストレート、直線の攻防まで、約20場面の実況を順番に再生。日本代表の着順や優勝馬に合わせて内容が変化します。</li><li>「実況を一括表示」ボタンを追加。レース終了後に着順と馬券払戻を公開します。</li></ul>
     <h3>2026/10/15 角刈凱旋門賞の馬券発売</h3>
