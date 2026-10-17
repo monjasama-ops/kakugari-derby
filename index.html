@@ -582,11 +582,27 @@ h1{color:#134c38;letter-spacing:.045em}
 .arc-buttons{display:flex;gap:8px;flex-wrap:wrap}.arc-buttons button{flex:1;min-width:150px;padding:12px;border:0;border-radius:9px;background:#206b49;color:white;font-weight:800;cursor:pointer}.arc-buttons button:disabled{opacity:.5;cursor:default}
 .arc-note{font-size:.8rem;color:#6d746e;margin-top:10px}
 </style>
+<style>
+.race-mode-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0;padding:12px;background:#f4f0df;border:2px solid #bda35a;border-radius:12px}.race-mode-bar label{cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:700}.race-mode-bar input{width:18px;height:18px;accent-color:#356b49}.race-picker{padding:14px;margin-bottom:14px;border:1px solid #b9c9bc;background:#edf6ef;border-radius:10px}.race-picker[hidden]{display:none}.race-picker-filters{display:flex;gap:12px;flex-wrap:wrap}.race-picker label{font-weight:700}.race-picker select{min-height:42px;font-size:16px;padding:6px;border:1px solid #899f91;border-radius:7px;max-width:100%}.race-pick-select{display:block;width:100%;margin:7px 0 10px}.race-picker button{padding:12px;background:#246746;color:white;border:0;border-radius:8px;font-weight:800}.race-picker-count,.race-picker small{display:block;margin:8px 0;color:#4e6153}
+</style>
 </head>
 <body>
 <div class="wrap">
 <h1>🏇 角刈ダービー</h1>
 <button type="button" class="update-history-button" onclick="showUpdateHistory()">📋 更新履歴</button>
+<div class="race-mode-bar" aria-label="プレイモード">
+  <strong>🏇 プレイモード</strong>
+  <label><input type="radio" name="raceMode" id="modeSeries" checked onchange="changeRacePlayMode('series')"> Ｇ１に連続で挑む</label>
+  <label><input type="radio" name="raceMode" id="modeSelect" onchange="changeRacePlayMode('select')"> レースを選択して挑む</label>
+</div>
+<div id="racePickerPanel" class="race-picker" hidden>
+  <div class="race-picker-filters"><label>月 <select id="raceMonthFilter" onchange="renderRacePicker()"><option value="all">すべて</option><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></label>
+  <label>格付 <select id="raceGradeFilter" onchange="renderRacePicker()"><option value="all">すべて</option><option>GⅠ</option><option>GⅡ</option><option>GⅢ</option></select></label></div>
+  <div id="raceCount" class="race-picker-count"></div>
+  <label for="racePickSelect">挑戦するレース</label><select id="racePickSelect" class="race-pick-select"></select>
+  <button type="button" onclick="selectRaceAndStart()">🏁 このレースに挑む</button>
+  <small>自由選択は年間24戦の進行を変えません。国内の主要JRA平地重賞を収録したゲーム用カタログです。開催時期・条件は年によって変わります。</small>
+</div>
 <div id="seasonRaceBanner" class="season-race-banner">
   <div id="seasonRaceMain" class="season-race-main">1レース目／全24レース　2月【角刈フェブラリーS】</div>
   <div id="seasonRaceSub" class="season-race-sub">GⅠ・東京・ダ1600m</div>
@@ -798,6 +814,152 @@ const RACE_SCHEDULE=[
   {"month":12,"grade":"GⅠ","name":"角刈ホープフルS","original":"ホープフルS","venue":"中山","surface":"芝","distance":2000},
   {"month":12,"grade":"GⅠ","name":"角刈有馬記念","original":"有馬記念","venue":"中山","surface":"芝","distance":2500},
 ];
+
+const EXTRA_GRADED_RACES = [
+  {month:1,grade:'GⅡ',name:'角刈日経新春杯',original:'日経新春杯',venue:'中京',surface:'芝',distance:2200},
+  {month:1,grade:'GⅡ',name:'角刈アメリカJCC',original:'アメリカJCC',venue:'中山',surface:'芝',distance:2200},
+  {month:1,grade:'GⅢ',name:'角刈中山金杯',original:'中山金杯',venue:'中山',surface:'芝',distance:2000},
+  {month:1,grade:'GⅢ',name:'角刈京都金杯',original:'京都金杯',venue:'京都',surface:'芝',distance:1600},
+  {month:1,grade:'GⅢ',name:'角刈シンザン記念',original:'シンザン記念',venue:'京都',surface:'芝',distance:1600},
+  {month:1,grade:'GⅢ',name:'角刈フェアリーS',original:'フェアリーS',venue:'中山',surface:'芝',distance:1600},
+  {month:1,grade:'GⅢ',name:'角刈京成杯',original:'京成杯',venue:'中山',surface:'芝',distance:2000},
+  {month:1,grade:'GⅢ',name:'角刈小倉牝馬S',original:'小倉牝馬S',venue:'小倉',surface:'芝',distance:2000},
+  {month:1,grade:'GⅢ',name:'角刈根岸S',original:'根岸S',venue:'東京',surface:'ダ',distance:1400},
+  {month:1,grade:'GⅢ',name:'角刈シルクロードS',original:'シルクロードS',venue:'京都',surface:'芝',distance:1200},
+  {month:2,grade:'GⅡ',name:'角刈京都記念',original:'京都記念',venue:'京都',surface:'芝',distance:2200},
+  {month:2,grade:'GⅡ',name:'角刈中山記念',original:'中山記念',venue:'中山',surface:'芝',distance:1800},
+  {month:2,grade:'GⅢ',name:'角刈東京新聞杯',original:'東京新聞杯',venue:'東京',surface:'芝',distance:1600},
+  {month:2,grade:'GⅢ',name:'角刈きさらぎ賞',original:'きさらぎ賞',venue:'京都',surface:'芝',distance:1800},
+  {month:2,grade:'GⅢ',name:'角刈クイーンC',original:'クイーンC',venue:'東京',surface:'芝',distance:1600},
+  {month:2,grade:'GⅢ',name:'角刈共同通信杯',original:'共同通信杯',venue:'東京',surface:'芝',distance:1800},
+  {month:2,grade:'GⅢ',name:'角刈ダイヤモンドS',original:'ダイヤモンドS',venue:'東京',surface:'芝',distance:3400},
+  {month:2,grade:'GⅢ',name:'角刈小倉大賞典',original:'小倉大賞典',venue:'小倉',surface:'芝',distance:1800},
+  {month:2,grade:'GⅢ',name:'角刈阪急杯',original:'阪急杯',venue:'阪神',surface:'芝',distance:1400},
+  {month:3,grade:'GⅡ',name:'角刈弥生賞ディープインパクト記念',original:'弥生賞ディープインパクト記念',venue:'中山',surface:'芝',distance:2000},
+  {month:3,grade:'GⅡ',name:'角刈フィリーズレビュー',original:'フィリーズレビュー',venue:'阪神',surface:'芝',distance:1400},
+  {month:3,grade:'GⅡ',name:'角刈金鯱賞',original:'金鯱賞',venue:'中京',surface:'芝',distance:2000},
+  {month:3,grade:'GⅡ',name:'角刈スプリングS',original:'スプリングS',venue:'中山',surface:'芝',distance:1800},
+  {month:3,grade:'GⅡ',name:'角刈阪神大賞典',original:'阪神大賞典',venue:'阪神',surface:'芝',distance:3000},
+  {month:3,grade:'GⅡ',name:'角刈日経賞',original:'日経賞',venue:'中山',surface:'芝',distance:2500},
+  {month:3,grade:'GⅢ',name:'角刈中山牝馬S',original:'中山牝馬S',venue:'中山',surface:'芝',distance:1800},
+  {month:3,grade:'GⅢ',name:'角刈ファルコンS',original:'ファルコンS',venue:'中京',surface:'芝',distance:1400},
+  {month:3,grade:'GⅢ',name:'角刈フラワーC',original:'フラワーC',venue:'中山',surface:'芝',distance:1800},
+  {month:3,grade:'GⅢ',name:'角刈毎日杯',original:'毎日杯',venue:'阪神',surface:'芝',distance:1800},
+  {month:3,grade:'GⅢ',name:'角刈マーチS',original:'マーチS',venue:'中山',surface:'ダ',distance:1800},
+  {month:3,grade:'GⅢ',name:'角刈チャーチルダウンズC',original:'チャーチルダウンズC',venue:'阪神',surface:'芝',distance:1600},
+  {month:4,grade:'GⅡ',name:'角刈ニュージーランドT',original:'ニュージーランドT',venue:'中山',surface:'芝',distance:1600},
+  {month:4,grade:'GⅡ',name:'角刈阪神牝馬S',original:'阪神牝馬S',venue:'阪神',surface:'芝',distance:1600},
+  {month:4,grade:'GⅡ',name:'角刈マイラーズC',original:'マイラーズC',venue:'京都',surface:'芝',distance:1600},
+  {month:4,grade:'GⅡ',name:'角刈フローラS',original:'フローラS',venue:'東京',surface:'芝',distance:2000},
+  {month:4,grade:'GⅡ',name:'角刈青葉賞',original:'青葉賞',venue:'東京',surface:'芝',distance:2400},
+  {month:4,grade:'GⅢ',name:'角刈ダービー卿チャレンジT',original:'ダービー卿チャレンジT',venue:'中山',surface:'芝',distance:1600},
+  {month:4,grade:'GⅢ',name:'角刈アンタレスS',original:'アンタレスS',venue:'阪神',surface:'ダ',distance:1800},
+  {month:4,grade:'GⅢ',name:'角刈福島牝馬S',original:'福島牝馬S',venue:'福島',surface:'芝',distance:1800},
+  {month:5,grade:'GⅡ',name:'角刈京王杯スプリングC',original:'京王杯スプリングC',venue:'東京',surface:'芝',distance:1400},
+  {month:5,grade:'GⅢ',name:'角刈新潟大賞典',original:'新潟大賞典',venue:'新潟',surface:'芝',distance:2000},
+  {month:5,grade:'GⅢ',name:'角刈平安S',original:'平安S',venue:'京都',surface:'ダ',distance:1900},
+  {month:5,grade:'GⅢ',name:'角刈葵S',original:'葵S',venue:'京都',surface:'芝',distance:1200},
+  {month:6,grade:'GⅡ',name:'角刈目黒記念',original:'目黒記念',venue:'東京',surface:'芝',distance:2500},
+  {month:6,grade:'GⅢ',name:'角刈鳴尾記念',original:'鳴尾記念',venue:'阪神',surface:'芝',distance:2000},
+  {month:6,grade:'GⅢ',name:'角刈エプソムC',original:'エプソムC',venue:'東京',surface:'芝',distance:1800},
+  {month:6,grade:'GⅢ',name:'角刈函館スプリントS',original:'函館スプリントS',venue:'函館',surface:'芝',distance:1200},
+  {month:6,grade:'GⅢ',name:'角刈府中牝馬S',original:'府中牝馬S',venue:'東京',surface:'芝',distance:1800},
+  {month:6,grade:'GⅢ',name:'角刈ラジオNIKKEI賞',original:'ラジオNIKKEI賞',venue:'福島',surface:'芝',distance:1800},
+  {month:6,grade:'GⅢ',name:'角刈北九州記念',original:'北九州記念',venue:'小倉',surface:'芝',distance:1200},
+  {month:7,grade:'GⅢ',name:'角刈七夕賞',original:'七夕賞',venue:'福島',surface:'芝',distance:2000},
+  {month:7,grade:'GⅢ',name:'角刈プロキオンS',original:'プロキオンS',venue:'小倉',surface:'ダ',distance:1700},
+  {month:7,grade:'GⅢ',name:'角刈函館記念',original:'函館記念',venue:'函館',surface:'芝',distance:2000},
+  {month:7,grade:'GⅢ',name:'角刈小倉記念',original:'小倉記念',venue:'小倉',surface:'芝',distance:2000},
+  {month:7,grade:'GⅢ',name:'角刈関屋記念',original:'関屋記念',venue:'新潟',surface:'芝',distance:1600},
+  {month:7,grade:'GⅢ',name:'角刈東海S',original:'東海S',venue:'中京',surface:'ダ',distance:1400},
+  {month:7,grade:'GⅢ',name:'角刈クイーンS',original:'クイーンS',venue:'札幌',surface:'芝',distance:1800},
+  {month:8,grade:'GⅡ',name:'角刈札幌記念',original:'札幌記念',venue:'札幌',surface:'芝',distance:2000},
+  {month:8,grade:'GⅢ',name:'角刈アイビスサマーダッシュ',original:'アイビスサマーダッシュ',venue:'新潟',surface:'芝',distance:1000},
+  {month:8,grade:'GⅢ',name:'角刈レパードS',original:'レパードS',venue:'新潟',surface:'ダ',distance:1800},
+  {month:8,grade:'GⅢ',name:'角刈エルムS',original:'エルムS',venue:'札幌',surface:'ダ',distance:1700},
+  {month:8,grade:'GⅢ',name:'角刈CBC賞',original:'CBC賞',venue:'中京',surface:'芝',distance:1200},
+  {month:8,grade:'GⅢ',name:'角刈中京記念',original:'中京記念',venue:'中京',surface:'芝',distance:1600},
+  {month:8,grade:'GⅢ',name:'角刈新潟2歳S',original:'新潟2歳S',venue:'新潟',surface:'芝',distance:1600},
+  {month:8,grade:'GⅢ',name:'角刈キーンランドC',original:'キーンランドC',venue:'札幌',surface:'芝',distance:1200},
+  {month:9,grade:'GⅡ',name:'角刈セントウルS',original:'セントウルS',venue:'阪神',surface:'芝',distance:1200},
+  {month:9,grade:'GⅡ',name:'角刈ローズS',original:'ローズS',venue:'阪神',surface:'芝',distance:1800},
+  {month:9,grade:'GⅡ',name:'角刈セントライト記念',original:'セントライト記念',venue:'中山',surface:'芝',distance:2200},
+  {month:9,grade:'GⅡ',name:'角刈オールカマー',original:'オールカマー',venue:'中山',surface:'芝',distance:2200},
+  {month:9,grade:'GⅡ',name:'角刈神戸新聞杯',original:'神戸新聞杯',venue:'阪神',surface:'芝',distance:2400},
+  {month:9,grade:'GⅢ',name:'角刈新潟記念',original:'新潟記念',venue:'新潟',surface:'芝',distance:2000},
+  {month:9,grade:'GⅢ',name:'角刈札幌2歳S',original:'札幌2歳S',venue:'札幌',surface:'芝',distance:1800},
+  {month:9,grade:'GⅢ',name:'角刈紫苑S',original:'紫苑S',venue:'中山',surface:'芝',distance:2000},
+  {month:9,grade:'GⅢ',name:'角刈京成杯オータムH',original:'京成杯オータムH',venue:'中山',surface:'芝',distance:1600},
+  {month:9,grade:'GⅢ',name:'角刈シリウスS',original:'シリウスS',venue:'阪神',surface:'ダ',distance:2000},
+  {month:10,grade:'GⅡ',name:'角刈毎日王冠',original:'毎日王冠',venue:'東京',surface:'芝',distance:1800},
+  {month:10,grade:'GⅡ',name:'角刈京都大賞典',original:'京都大賞典',venue:'京都',surface:'芝',distance:2400},
+  {month:10,grade:'GⅡ',name:'角刈スワンS',original:'スワンS',venue:'京都',surface:'芝',distance:1400},
+  {month:10,grade:'GⅡ',name:'角刈富士S',original:'富士S',venue:'東京',surface:'芝',distance:1600},
+  {month:10,grade:'GⅢ',name:'角刈サウジアラビアRC',original:'サウジアラビアRC',venue:'東京',surface:'芝',distance:1600},
+  {month:10,grade:'GⅢ',name:'角刈アルテミスS',original:'アルテミスS',venue:'東京',surface:'芝',distance:1600},
+  {month:10,grade:'GⅢ',name:'角刈ファンタジーS',original:'ファンタジーS',venue:'京都',surface:'芝',distance:1400},
+  {month:11,grade:'GⅡ',name:'角刈京王杯2歳S',original:'京王杯2歳S',venue:'東京',surface:'芝',distance:1400},
+  {month:11,grade:'GⅡ',name:'角刈デイリー杯2歳S',original:'デイリー杯2歳S',venue:'京都',surface:'芝',distance:1600},
+  {month:11,grade:'GⅡ',name:'角刈ステイヤーズS',original:'ステイヤーズS',venue:'中山',surface:'芝',distance:3600},
+  {month:11,grade:'GⅢ',name:'角刈みやこS',original:'みやこS',venue:'京都',surface:'ダ',distance:1800},
+  {month:11,grade:'GⅢ',name:'角刈武蔵野S',original:'武蔵野S',venue:'東京',surface:'ダ',distance:1600},
+  {month:11,grade:'GⅢ',name:'角刈福島記念',original:'福島記念',venue:'福島',surface:'芝',distance:2000},
+  {month:11,grade:'GⅢ',name:'角刈東スポ杯2歳S',original:'東スポ杯2歳S',venue:'東京',surface:'芝',distance:1800},
+  {month:11,grade:'GⅢ',name:'角刈京都2歳S',original:'京都2歳S',venue:'京都',surface:'芝',distance:2000},
+  {month:12,grade:'GⅡ',name:'角刈阪神C',original:'阪神C',venue:'阪神',surface:'芝',distance:1400},
+  {month:12,grade:'GⅢ',name:'角刈チャレンジC',original:'チャレンジC',venue:'阪神',surface:'芝',distance:2000},
+  {month:12,grade:'GⅢ',name:'角刈中日新聞杯',original:'中日新聞杯',venue:'中京',surface:'芝',distance:2000},
+  {month:12,grade:'GⅢ',name:'角刈カペラS',original:'カペラS',venue:'中山',surface:'ダ',distance:1200},
+  {month:12,grade:'GⅢ',name:'角刈ターコイズS',original:'ターコイズS',venue:'中山',surface:'芝',distance:1600}
+];
+const ALL_SELECTABLE_RACES=[...RACE_SCHEDULE,...EXTRA_GRADED_RACES].sort((a,b)=>a.month-b.month||({"GⅠ":0,"GⅡ":1,"GⅢ":2}[a.grade]-{"GⅠ":0,"GⅡ":1,"GⅢ":2}[b.grade])||a.original.localeCompare(b.original,'ja'));
+let racePlayMode='series';
+let selectedCustomRace=null;
+function renderRaceModeUI(){
+ const isPick=racePlayMode==='select';
+ document.getElementById('modeSeries').checked=!isPick;
+ document.getElementById('modeSelect').checked=isPick;
+ document.getElementById('racePickerPanel').hidden=!isPick;
+ if(isPick)renderRacePicker();
+}
+function renderRacePicker(){
+ const month=document.getElementById('raceMonthFilter').value,grade=document.getElementById('raceGradeFilter').value;
+ const list=ALL_SELECTABLE_RACES.filter(r=>(month==='all'||String(r.month)===month)&&(grade==='all'||r.grade===grade));
+ const select=document.getElementById('racePickSelect');
+ const previous=selectedCustomRace?ALL_SELECTABLE_RACES.indexOf(selectedCustomRace):-1;
+ select.innerHTML=list.map(r=>'<option value="'+ALL_SELECTABLE_RACES.indexOf(r)+'">'+r.month+'月 '+r.grade+' '+r.name+'（'+r.venue+' '+r.surface+r.distance+'m）</option>').join('');
+ if(list.some(r=>ALL_SELECTABLE_RACES.indexOf(r)===previous))select.value=String(previous);
+ document.getElementById('raceCount').textContent=list.length+'レース表示／全'+ALL_SELECTABLE_RACES.length+'レース';
+}
+function changeRacePlayMode(mode){
+ if(racing){alert('レース実況中はモードを切り替えられません。');renderRaceModeUI();return;}
+ if(mode===racePlayMode)return;
+ if(!confirm('モードを切り替えますか？ 現在の未確定の馬券は取り消されます。')){renderRaceModeUI();return;}
+ racePlayMode=mode;selectedCustomRace=null;renderRaceModeUI();
+ if(mode==='series'){resetForChosenRace();}else{renderSeasonRaceBanner();}
+}
+function selectRaceAndStart(){
+ if(racing){alert('実況中は選択できません。');return;}
+ const index=Number(document.getElementById('racePickSelect').value);
+ if(!Number.isInteger(index)||!ALL_SELECTABLE_RACES[index])return;
+ if(!confirm(ALL_SELECTABLE_RACES[index].name+'を開催しますか？ 未確定の馬券は取り消されます。'))return;
+ selectedCustomRace=ALL_SELECTABLE_RACES[index];
+ resetForChosenRace();
+}
+function resetForChosenRace(){
+ bets=[];purchaseSerial=0;selectedOrder=[];formationGroups=[[],[],[]];budgetAllocationMode=false;updateStakeModeUI();
+ document.getElementById('track').innerHTML='';resetCommentaryScenes();
+ log('レースを準備しました。馬券を購入してください。');
+ document.getElementById('summary').textContent='まだレースは行われていません。';
+ lastFinalOrder=null;lastRaceTimes={};lastRaceMargins={};fullBoardVisible=false;
+ document.getElementById('board').textContent='レース終了後に1〜5着を表示します。';
+ document.getElementById('toggleBoardBtn').style.display='none';
+ document.getElementById('resultOdds').innerHTML='レース終了後に表示します。';
+ prepareRace();update();
+ const next=document.getElementById('nextRaceBtn');if(next)next.textContent=racePlayMode==='select'?'別のレースを選ぶ':'次のレース';
+ window.scrollTo({top:0,left:0,behavior:'smooth'});
+}
+
 let seasonRaceIndex=0;
 
 
@@ -1047,7 +1209,7 @@ function distanceCategoryFor(m){
 }
 
 function currentScheduledRace(){
-  return RACE_SCHEDULE[Math.max(0,Math.min(seasonRaceIndex,RACE_SCHEDULE.length-1))];
+  return racePlayMode==='select'&&selectedCustomRace?selectedCustomRace:RACE_SCHEDULE[Math.max(0,Math.min(seasonRaceIndex,RACE_SCHEDULE.length-1))];
 }
 
 
@@ -1070,7 +1232,7 @@ function renderRaceLogo(){
   const p=palettes[seasonRaceIndex%palettes.length];
   const name=escapeSvgText(r.name);
   const meta=escapeSvgText(r.venue+'  '+r.surface+r.distance.toLocaleString()+'m');
-  const serial=String(seasonRaceIndex+1).padStart(2,'0')+' / '+String(RACE_SCHEDULE.length).padStart(2,'0');
+  const serial=racePlayMode==='select'?'FREE':String(seasonRaceIndex+1).padStart(2,'0')+' / '+String(RACE_SCHEDULE.length).padStart(2,'0');
 
   // 長いGⅠ名でも収まるよう文字サイズを自動調整
   const chars=Array.from(r.name).length;
@@ -1094,7 +1256,7 @@ function renderRaceLogo(){
     '<text x="52" y="102" text-anchor="middle" font-size="19" font-weight="900" fill="'+p[2]+'">GⅠ</text>'+
     '<circle cx="848" cy="95" r="25" fill="none" stroke="'+p[2]+'" stroke-width="2"/>'+
     '<text x="848" y="102" text-anchor="middle" font-size="15" font-weight="900" fill="'+p[2]+'">'+serial+'</text>'+
-    '<text x="450" y="61" text-anchor="middle" font-size="16" font-weight="800" letter-spacing="5" fill="'+p[2]+'">KAKUGARI GRADE ONE</text>'+
+    '<text x="450" y="61" text-anchor="middle" font-size="16" font-weight="800" letter-spacing="5" fill="'+p[2]+'">KAKUGARI GRADED RACE</text>'+
     '<text x="450" y="116" text-anchor="middle" font-size="'+fs+'" font-weight="900" fill="#fff" filter="url(#logoShadow)" font-family="sans-serif">'+name+'</text>'+
     '<text x="450" y="143" text-anchor="middle" font-size="16" font-weight="700" letter-spacing="2" fill="#fff" opacity=".9">'+meta+'</text>'+
   '</svg>';
@@ -1103,7 +1265,7 @@ function renderRaceLogo(){
 function renderSeasonRaceBanner(){
   const r=currentScheduledRace();
   document.getElementById('seasonRaceMain').textContent=
-    (seasonRaceIndex+1)+'レース目／全'+RACE_SCHEDULE.length+'レース　'+r.month+'月【'+r.name+'】';
+    (racePlayMode==='select'?'自由選択モード　':(seasonRaceIndex+1)+'レース目／全'+RACE_SCHEDULE.length+'レース　')+r.month+'月【'+r.name+'】';
   document.getElementById('seasonRaceSub').innerHTML=
     '<span class="season-race-grade">'+r.grade+'</span>・'+
     r.venue+'・'+r.surface+r.distance.toLocaleString()+'m';
@@ -4725,7 +4887,8 @@ function finish(order){
 
   const nextBtn=document.getElementById('nextRaceBtn');
   if(nextBtn){
-    if(seasonRaceIndex>=RACE_SCHEDULE.length-1){
+    if(racePlayMode==='select'){nextBtn.textContent='🏇 別のレースを選ぶ';}
+    else if(seasonRaceIndex>=RACE_SCHEDULE.length-1){
       nextBtn.textContent='🏆 シーズン終了（有馬記念まで完走）';
     }else{
       const nr=RACE_SCHEDULE[seasonRaceIndex+1];
@@ -5047,6 +5210,11 @@ function finishArcEvent(){
 }
 
 function newRace(){
+  if(racePlayMode==='select'){
+    document.getElementById('racePickerPanel').hidden=false;
+    document.getElementById('racePickerPanel').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   // 有馬記念まで終わったらシーズン終了。
   if(seasonRaceIndex>=RACE_SCHEDULE.length-1){
     showSeasonResult();
@@ -5139,11 +5307,12 @@ document.getElementById('stake').addEventListener('input',function(){
 
 loadHorseSettings();
 renderHorseEditor();
-const KAKUGARI_UPDATE_VERSION='2026-10-16-arc-commentary-logo';
+const KAKUGARI_UPDATE_VERSION='2026-10-17-race-selection';
 function showUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.add('is-open');}
 function closeUpdateHistory(){const el=document.getElementById('updateHistoryOverlay');if(el)el.classList.remove('is-open');try{localStorage.setItem('kakugari-last-seen-update',KAKUGARI_UPDATE_VERSION);}catch(e){}}
 prepareRace();
 update();
+renderRaceModeUI();
 renderCommentaryMode();
 try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSION)showUpdateHistory();}catch(e){showUpdateHistory();}
 </script>
@@ -5207,7 +5376,8 @@ try{if(localStorage.getItem('kakugari-last-seen-update')!==KAKUGARI_UPDATE_VERSI
 <div class="update-history-overlay" id="updateHistoryOverlay" role="dialog" aria-modal="true" aria-labelledby="updateHistoryHeading" onclick="if(event.target===this)closeUpdateHistory()">
   <div class="update-history-dialog">
     <h2 id="updateHistoryHeading">📋 角刈ダービー 更新履歴</h2>
-    <h3>🆕 2026/10/16 角刈凱旋門賞・専用ロゴと長編実況</h3>
+    <h3>🆕 2026/10/17 プレイモード切替・重賞レース選択</h3><ul><li>画面上部に「Ｇ１に連続で挑む」「レースを選択して挑む」を追加。自由選択ではGⅠ・GⅡ・GⅢの主要平地重賞を月・格付で絞り込み可能。</li><li>自由選択の結果は馬券収支へ反映。年間GⅠ24戦の進行には影響しません。</li></ul>
+    <h3>2026/10/16 角刈凱旋門賞・専用ロゴと長編実況</h3>
     <ul><li>海外遠征イベントの名称を「角刈凱旋門賞」に統一。専用の金×深緑SVGレースロゴを追加しました。</li><li>スタート前から道中、ロンシャンの起伏、フォルスストレート、直線の攻防まで、約20場面の実況を順番に再生。日本代表の着順や優勝馬に合わせて内容が変化します。</li><li>「実況を一括表示」ボタンを追加。レース終了後に着順と馬券払戻を公開します。</li></ul>
     <h3>2026/10/15 角刈凱旋門賞の馬券発売</h3>
     <ul><li>凱旋門賞でも単勝・複勝・馬連・馬単・ワイド・三連複・三連単を購入可能に。海外馬を含む16頭から選択できます。</li><li>参考オッズ、購入済み馬券、確定後の的中・払戻表示を追加。ゲーム内所持金と年間収支にも反映します。</li></ul>
